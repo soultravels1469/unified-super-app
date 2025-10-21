@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck } from 'lucide-react';
 
 function Layout({ children, onLogout }) {
   const username = localStorage.getItem('username');
@@ -7,6 +7,9 @@ function Layout({ children, onLogout }) {
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/revenue', icon: DollarSign, label: 'Revenue' },
+    { to: '/packages', icon: Package, label: 'Tour Packages' },
+    { to: '/tickets', icon: Plane, label: 'Tickets' },
+    { to: '/visas', icon: FileCheck, label: 'Visas' },
     { to: '/expenses', icon: Receipt, label: 'Expenses' },
     { to: '/pending', icon: Clock, label: 'Pending' },
     { to: '/reports', icon: FileText, label: 'Reports' },
@@ -26,7 +29,7 @@ function Layout({ children, onLogout }) {
               key={item.to}
               to={item.to}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              data-testid={`nav-${item.label.toLowerCase()}`}
+              data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
             >
               <item.icon size={20} />
               <span>{item.label}</span>
@@ -65,6 +68,7 @@ function Layout({ children, onLogout }) {
           height: 100vh;
           left: 0;
           top: 0;
+          overflow-y: auto;
         }
 
         .sidebar-header {

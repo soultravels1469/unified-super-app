@@ -4,23 +4,26 @@ import { API } from '@/App';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
 
-function RevenueForm({ revenue, onClose }) {
+function RevenueForm({ revenue, onClose, defaultSource = '' }) {
   const [formData, setFormData] = useState({
     date: '',
     client_name: '',
-    source: 'Visa',
+    source: defaultSource || 'Visa',
     payment_mode: 'Cash',
     pending_amount: 0,
     received_amount: 0,
     status: 'Pending',
+    supplier: '',
     notes: '',
   });
 
   useEffect(() => {
     if (revenue) {
       setFormData(revenue);
+    } else if (defaultSource) {
+      setFormData(prev => ({ ...prev, source: defaultSource }));
     }
-  }, [revenue]);
+  }, [revenue, defaultSource]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -85,7 +88,13 @@ function RevenueForm({ revenue, onClose }) {
 
             <div className="form-group">
               <label>Source *</label>
-              <select name="source" value={formData.source} onChange={handleChange} data-testid="revenue-source-select">
+              <select 
+                name="source" 
+                value={formData.source} 
+                onChange={handleChange} 
+                data-testid="revenue-source-select"
+                disabled={!!defaultSource}
+              >
                 <option value="Visa">Visa</option>
                 <option value="Ticket">Ticket</option>
                 <option value="Package">Package</option>
@@ -138,6 +147,18 @@ function RevenueForm({ revenue, onClose }) {
                 <option value="Pending">Pending</option>
                 <option value="Received">Received</option>
               </select>
+            </div>
+
+            <div className="form-group">
+              <label>Supplier</label>
+              <input
+                type="text"
+                name="supplier"
+                value={formData.supplier}
+                onChange={handleChange}
+                placeholder="Hotel, airline, or land supplier"
+                data-testid="revenue-supplier-input"
+              />
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>

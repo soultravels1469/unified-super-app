@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import '@/App.css';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -8,6 +7,9 @@ import Revenue from '@/pages/Revenue';
 import Expenses from '@/pages/Expenses';
 import PendingPayments from '@/pages/PendingPayments';
 import Reports from '@/pages/Reports';
+import TourPackages from '@/pages/TourPackages';
+import Tickets from '@/pages/Tickets';
+import Visas from '@/pages/Visas';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -64,6 +66,9 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/revenue" element={<Revenue />} />
+                    <Route path="/packages" element={<TourPackages />} />
+                    <Route path="/tickets" element={<Tickets />} />
+                    <Route path="/visas" element={<Visas />} />
                     <Route path="/expenses" element={<Expenses />} />
                     <Route path="/pending" element={<PendingPayments />} />
                     <Route path="/reports" element={<Reports />} />
