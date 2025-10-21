@@ -4,6 +4,7 @@ import { API } from '@/App';
 import { toast } from 'sonner';
 import RevenueForm from '@/components/RevenueForm';
 import { Pencil, Trash2 } from 'lucide-react';
+import { groupByMonth } from '@/utils/helpers';
 
 function Revenue() {
   const [revenues, setRevenues] = useState([]);
@@ -49,6 +50,8 @@ function Revenue() {
     fetchRevenues();
   };
 
+  const groupedRevenues = groupByMonth(revenues);
+
   if (loading) {
     return <div className="page-container">Loading...</div>;
   }
@@ -69,67 +72,87 @@ function Revenue() {
         />
       )}
 
-      <div className="table-container" data-testid="revenue-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Client Name</th>
-              <th>Source</th>
-              <th>Payment Mode</th>
-              <th>Received</th>
-              <th>Pending</th>
-              <th>Status</th>
-              <th>Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {revenues.length === 0 ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                  No revenue entries yet. Add your first entry!
-                </td>
-              </tr>
-            ) : (
-              revenues.map((rev) => (
-                <tr key={rev.id} data-testid={`revenue-row-${rev.id}`}>
-                  <td>{rev.date}</td>
-                  <td>{rev.client_name}</td>
-                  <td>{rev.source}</td>
-                  <td>{rev.payment_mode}</td>
-                  <td>₹{rev.received_amount.toLocaleString()}</td>
-                  <td>₹{rev.pending_amount.toLocaleString()}</td>
-                  <td>
-                    <span className={`status-badge status-${rev.status.toLowerCase()}`}>
-                      {rev.status}
-                    </span>
-                  </td>
-                  <td>{rev.notes || '-'}</td>
-                  <td>
-                    <div className="actions">
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => handleEdit(rev)}
-                        data-testid={`edit-revenue-${rev.id}`}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(rev.id)}
-                        data-testid={`delete-revenue-${rev.id}`}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {Object.keys(groupedRevenues).length === 0 ? (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+          No revenue entries yet. Add your first entry!
+        </div>
+      ) : (
+        Object.entries(groupedRevenues).reverse().map(([month, items]) => (
+          <div key={month} className="month-section" data-testid={`month-${month}`}>
+            <h3 className="month-title">{new Date(month + '-01').toLocaleDateString('default', { month: 'long', year: 'numeric' })}</h3>
+            <div className="table-container" data-testid="revenue-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Client Name</th>
+                    <th>Source</th>
+                    <th>Payment Mode</th>
+                    <th>Received</th>
+                    <th>Pending</th>
+                    <th>Status</th>
+                    <th>Supplier</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((rev) => (
+                    <tr key={rev.id} data-testid={`revenue-row-${rev.id}`}>
+                      <td>{rev.date}</td>
+                      <td>{rev.client_name}</td>
+                      <td>{rev.source}</td>
+                      <td>{rev.payment_mode}</td>
+                      <td>₹{rev.received_amount.toLocaleString()}</td>
+                      <td>₹{rev.pending_amount.toLocaleString()}</td>
+                      <td>
+                        <span className={`status-badge status-${rev.status.toLowerCase()}`}>
+                          {rev.status}
+                        </span>
+                      </td>
+                      <td>{rev.supplier || '-'}</td>
+                      <td>{rev.notes || '-'}</td>
+                      <td>
+                        <div className="actions">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleEdit(rev)}
+                            data-testid={`edit-revenue-${rev.id}`}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDelete(rev.id)}
+                            data-testid={`delete-revenue-${rev.id}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))
+      )}
+
+      <style jsx>{`
+        .month-section {
+          margin-bottom: 2.5rem;
+        }
+
+        .month-title {
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #1a202c;
+          margin-bottom: 1rem;
+          padding-left: 0.5rem;
+          border-left: 4px solid #6366f1;
+        }
+      `}</style>
     </div>
   );
 }

@@ -3,10 +3,12 @@ import axios from 'axios';
 import { API } from '@/App';
 import { toast } from 'sonner';
 import { CheckCircle } from 'lucide-react';
+import { groupByMonth, getAvailableMonths } from '@/utils/helpers';
 
 function PendingPayments() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState('all');
 
   useEffect(() => {
     fetchPendingPayments();
@@ -38,6 +40,18 @@ function PendingPayments() {
     }
   };
 
+  const availableMonths = getAvailableMonths(pendingPayments);
+  const groupedPayments = groupByMonth(pendingPayments);
+  
+  const filteredMonths = selectedMonth === 'all' 
+    ? Object.entries(groupedPayments)
+    : [[selectedMonth, groupedPayments[selectedMonth] || []]];
+
+  const totalPending = pendingPayments.reduce((sum, p) => sum + p.pending_amount, 0);
+  const filteredTotal = selectedMonth === 'all'
+    ? totalPending
+    : (groupedPayments[selectedMonth] || []).reduce((sum, p) => sum + p.pending_amount, 0);
+
   if (loading) {
     return <div className="page-container">Loading...</div>;
   }
@@ -46,53 +60,112 @@ function PendingPayments() {
     <div className="page-container" data-testid="pending-payments-page">
       <h1 className="page-title" data-testid="pending-payments-title">Pending Payments</h1>
 
-      <div className="table-container" data-testid="pending-payments-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Client Name</th>
-              <th>Source</th>
-              <th>Received Amount</th>
-              <th>Pending Amount</th>
-              <th>Notes</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingPayments.length === 0 ? (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                  No pending payments. All payments are up to date!
-                </td>
-              </tr>
-            ) : (
-              pendingPayments.map((payment) => (
-                <tr key={payment.id} data-testid={`pending-payment-${payment.id}`}>
-                  <td>{payment.date}</td>
-                  <td>{payment.client_name}</td>
-                  <td>{payment.source}</td>
-                  <td>₹{payment.received_amount.toLocaleString()}</td>
-                  <td style={{ color: '#f59e0b', fontWeight: 600 }}>
-                    ₹{payment.pending_amount.toLocaleString()}
-                  </td>
-                  <td>{payment.notes || '-'}</td>
-                  <td>
-                    <button
-                      className="btn btn-success btn-sm"
-                      onClick={() => markAsPaid(payment)}
-                      data-testid={`mark-paid-${payment.id}`}
-                    >
-                      <CheckCircle size={16} style={{ marginRight: '0.5rem' }} />
-                      Mark Paid
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.5rem', fontWeight: 500 }}>Total Pending Amount</div>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#f59e0b' }} data-testid="total-pending-amount">
+              ₹{filteredTotal.toLocaleString()}
+            </div>
+          </div>
+          {availableMonths.length > 0 && (
+            <div>
+              <label style={{ marginRight: '0.75rem', fontWeight: 500, color: '#92400e', fontSize: '0.875rem' }}>Filter:</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                style={{
+                  padding: '0.625rem 1rem',
+                  borderRadius: '12px',
+                  border: '2px solid #fbbf24',
+                  fontSize: '0.9375rem',
+                  minWidth: '180px',
+                  background: 'white'
+                }}
+              >
+                <option value="all">All Months</option>
+                {availableMonths.map(month => (
+                  <option key={month} value={month}>
+                    {new Date(month + '-01').toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
+
+      {pendingPayments.length === 0 ? (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+          No pending payments. All payments are up to date!
+        </div>
+      ) : filteredMonths.length === 0 || filteredMonths[0][1]?.length === 0 ? (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+          No pending payments for the selected month.
+        </div>
+      ) : (
+        filteredMonths.reverse().map(([month, items]) => (
+          items && items.length > 0 && (
+            <div key={month} className="month-section">
+              <h3 className="month-title">{new Date(month + '-01').toLocaleDateString('default', { month: 'long', year: 'numeric' })}</h3>
+              <div className="table-container" data-testid="pending-payments-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Client Name</th>
+                      <th>Source</th>
+                      <th>Received Amount</th>
+                      <th>Pending Amount</th>
+                      <th>Notes</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((payment) => (
+                      <tr key={payment.id} data-testid={`pending-payment-${payment.id}`}>
+                        <td>{payment.date}</td>
+                        <td>{payment.client_name}</td>
+                        <td>{payment.source}</td>
+                        <td>₹{payment.received_amount.toLocaleString()}</td>
+                        <td style={{ color: '#f59e0b', fontWeight: 600 }}>
+                          ₹{payment.pending_amount.toLocaleString()}
+                        </td>
+                        <td>{payment.notes || '-'}</td>
+                        <td>
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() => markAsPaid(payment)}
+                            data-testid={`mark-paid-${payment.id}`}
+                          >
+                            <CheckCircle size={16} style={{ marginRight: '0.5rem' }} />
+                            Mark Paid
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        ))
+      )}
+
+      <style jsx>{`
+        .month-section {
+          margin-bottom: 2.5rem;
+        }
+
+        .month-title {
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #1a202c;
+          margin-bottom: 1rem;
+          padding-left: 0.5rem;
+          border-left: 4px solid #f59e0b;
+        }
+      `}</style>
     </div>
   );
 }
