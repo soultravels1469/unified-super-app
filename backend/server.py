@@ -59,6 +59,7 @@ class Revenue(BaseModel):
     pending_amount: float
     received_amount: float
     status: str  # Pending/Received
+    supplier: Optional[str] = ""
     notes: Optional[str] = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -70,6 +71,7 @@ class RevenueCreate(BaseModel):
     pending_amount: float
     received_amount: float
     status: str
+    supplier: Optional[str] = ""
     notes: Optional[str] = ""
 
 class RevenueUpdate(BaseModel):
@@ -80,6 +82,7 @@ class RevenueUpdate(BaseModel):
     pending_amount: Optional[float] = None
     received_amount: Optional[float] = None
     status: Optional[str] = None
+    supplier: Optional[str] = None
     notes: Optional[str] = None
 
 class Expense(BaseModel):
