@@ -178,8 +178,8 @@ async def login(request: LoginRequest):
     if not user or not pwd_context.verify(request.password, user['hashed_password']):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = jwt.encode({"username": user['username']}, SECRET_KEY, algorithm=ALGORITHM)
-    return LoginResponse(token=token, username=user['username'])
+    token = jwt.encode({"username": user['username'], "role": user.get('role', 'admin')}, SECRET_KEY, algorithm=ALGORITHM)
+    return LoginResponse(token=token, username=user['username'], role=user.get('role', 'admin'))
 
 @api_router.get("/revenue", response_model=List[Revenue])
 async def get_revenues():
