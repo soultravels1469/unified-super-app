@@ -10,6 +10,7 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
     client_name: '',
     source: defaultSource || 'Visa',
     payment_mode: 'Cash',
+    total_amount: 0,
     pending_amount: 0,
     received_amount: 0,
     status: 'Pending',
@@ -19,7 +20,9 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
 
   useEffect(() => {
     if (revenue) {
-      setFormData(revenue);
+      // Calculate total from existing data
+      const total = (revenue.received_amount || 0) + (revenue.pending_amount || 0);
+      setFormData({ ...revenue, total_amount: total });
     } else if (defaultSource) {
       setFormData(prev => ({ ...prev, source: defaultSource }));
     }
