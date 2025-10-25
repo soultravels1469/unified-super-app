@@ -522,6 +522,94 @@ async def create_manual_journal(entry_data: Dict[str, Any]):
     
     return {"message": "Journal entry created successfully", "entry_id": entry_id}
 
+# ===== ADMIN SETTINGS ENDPOINTS =====
+
+@api_router.get("/admin/settings")
+async def get_admin_settings():
+    """Get admin settings"""
+    settings = await db.admin_settings.find_one({}, {"_id": 0})
+    if not settings:
+        # Return default settings
+        return {
+            "company_name": "Soul Immigration & Travels",
+            "gstin": "",
+            "logo_url": "",
+            "bank_name": "",
+            "account_number": "",
+            "ifsc_code": "",
+            "branch": "",
+            "address": "",
+            "phone": "",
+            "email": ""
+        }
+    return settings
+
+@api_router.post("/admin/settings")
+async def update_admin_settings(settings: Dict[str, Any]):
+    """Update admin settings"""
+    settings['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    existing = await db.admin_settings.find_one({})
+    if existing:
+        await db.admin_settings.update_one({}, {"$set": settings})
+    else:
+        settings['id'] = str(uuid.uuid4())
+        await db.admin_settings.insert_one(settings)
+    
+    return {"message": "Settings updated successfully"}
+
+# ===== USER MANAGEMENT ENDPOINTS =====
+
+@api_router.get("/admin/users")
+async def get_users():
+    """Get all users"""
+    users = await db.users.find({}, {"_id": 0, "hashed_password": 0}).to_list(100)
+    return {"users": users}
+
+@api_router.post("/admin/users")
+async def create_user(user_data: Dict[str, Any]):
+    """Create new user"""
+    # Check if username exists
+    existing = await db.users.find_one({"username": user_data['username']})
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    hashed_password = pwd_context.hash(user_data['password'])
+    user = {
+        'id': str(uuid.uuid4()),
+        'username': user_data['username'],
+        'hashed_password': hashed_password,
+        'role': user_data.get('role', 'viewer'),
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(user)
+    return {"message": "User created successfully", "username": user['username']}
+
+@api_router.delete("/admin/users/{username}")
+async def delete_user(username: str):
+    """Delete user"""
+    if username == "admin":
+        raise HTTPException(status_code=400, detail="Cannot delete admin user")
+    
+    result = await db.users.delete_one({"username": username})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted successfully"}
+
+@api_router.put("/admin/users/{username}/password")
+async def change_password(username: str, password_data: Dict[str, str]):
+    """Change user password"""
+    user = await db.users.find_one({"username": username})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    hashed_password = pwd_context.hash(password_data['new_password'])
+    await db.users.update_one({"username": username}, {"$set": {"hashed_password": hashed_password}})
+    
+    return {"message": "Password updated successfully"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
