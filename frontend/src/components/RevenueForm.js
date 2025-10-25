@@ -139,6 +139,23 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
             </div>
 
             <div className="form-group">
+              <label>Total Amount *</label>
+              <input
+                type="number"
+                name="total_amount"
+                value={formData.total_amount}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                required
+                data-testid="revenue-total-input"
+              />
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                Total invoice amount
+              </div>
+            </div>
+
+            <div className="form-group">
               <label>Received Amount *</label>
               <input
                 type="number"
@@ -150,6 +167,9 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
                 required
                 data-testid="revenue-received-input"
               />
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                Auto-updates pending amount
+              </div>
             </div>
 
             <div className="form-group">
@@ -164,6 +184,9 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
                 required
                 data-testid="revenue-pending-input"
               />
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                Auto-updates received amount
+              </div>
             </div>
 
             <div className="form-group">
