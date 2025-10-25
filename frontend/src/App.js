@@ -77,6 +77,11 @@ function App() {
                     <Route path="/expenses" element={<Expenses />} />
                     <Route path="/pending" element={<PendingPayments />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/accounting/chart-of-accounts" element={<ChartOfAccounts />} />
+                    <Route path="/accounting/trial-balance" element={<TrialBalance />} />
+                    <Route path="/accounting/cash-bank" element={<CashBankBook />} />
+                    <Route path="/accounting/gst" element={<GSTSummary />} />
+                    <Route path="/accounting/invoices" element={<InvoiceGenerator />} />
                   </Routes>
                 </Layout>
               ) : (
