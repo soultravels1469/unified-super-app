@@ -150,7 +150,7 @@ function PendingPayments() {
                       <th>Received Amount</th>
                       <th>Pending Amount</th>
                       <th>Notes</th>
-                      <th>Action</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -165,14 +165,24 @@ function PendingPayments() {
                         </td>
                         <td>{payment.notes || '-'}</td>
                         <td>
-                          <button
-                            className="btn btn-success btn-sm"
-                            onClick={() => markAsPaid(payment)}
-                            data-testid={`mark-paid-${payment.id}`}
-                          >
-                            <CheckCircle size={16} style={{ marginRight: '0.5rem' }} />
-                            Mark Paid
-                          </button>
+                          <div className="actions">
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => handleEditClick(payment)}
+                              data-testid={`edit-payment-${payment.id}`}
+                              title="Partial Payment"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              className="btn btn-success btn-sm"
+                              onClick={() => markAsPaid(payment)}
+                              data-testid={`mark-paid-${payment.id}`}
+                            >
+                              <CheckCircle size={16} style={{ marginRight: '0.5rem' }} />
+                              Mark Paid
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
