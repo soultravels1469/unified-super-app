@@ -224,6 +224,10 @@ async def create_expense(expense: ExpenseCreate):
     doc = expense_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.expenses.insert_one(doc)
+    
+    # Create accounting ledger entry
+    await accounting.create_expense_ledger_entry(expense_obj.model_dump())
+    
     return expense_obj
 
 @api_router.put("/expenses/{expense_id}", response_model=Expense)
