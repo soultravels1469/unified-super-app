@@ -39,33 +39,68 @@ function Layout({ children, onLogout }) {
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-section-title">Main</div>
-            {navItems.filter(item => item.section === 'main').map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
-              >
-                <item.icon size={20} />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            {navItems.filter(item => item.section === 'main').map((item) => {
+              // Hide admin-only items for viewer role
+              if (item.adminOnly === false && role === 'viewer') {
+                return null;
+              }
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
+                >
+                  <item.icon size={20} />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </div>
           
           <div className="nav-section">
             <div className="nav-section-title">Accounting</div>
-            {navItems.filter(item => item.section === 'accounting').map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                data-testid={`nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
-              >
-                <item.icon size={20} />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            {navItems.filter(item => item.section === 'accounting').map((item) => {
+              if (item.adminOnly === false && role === 'viewer') {
+                return null;
+              }
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  data-testid={`nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                >
+                  <item.icon size={20} />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </div>
+
+          {role === 'admin' && (
+            <div className="nav-section">
+              <div 
+                className="nav-section-title admin-menu-toggle" 
+                onClick={() => setShowAdminMenu(!showAdminMenu)}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <span>Admin</span>
+                <ChevronDown size={16} style={{ transform: showAdminMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              </div>
+              {showAdminMenu && adminMenuItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  data-testid={`nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                >
+                  <item.icon size={20} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="sidebar-footer">
