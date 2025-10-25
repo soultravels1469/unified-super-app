@@ -1,23 +1,31 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet, Settings, Users, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 function Layout({ children, onLogout }) {
   const username = localStorage.getItem('username');
+  const role = localStorage.getItem('role');
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
-    { to: '/revenue', icon: DollarSign, label: 'Revenue', section: 'main' },
-    { to: '/packages', icon: Package, label: 'Tour Packages', section: 'main' },
-    { to: '/tickets', icon: Plane, label: 'Tickets', section: 'main' },
-    { to: '/visas', icon: FileCheck, label: 'Visas', section: 'main' },
-    { to: '/expenses', icon: Receipt, label: 'Expenses', section: 'main' },
-    { to: '/pending', icon: Clock, label: 'Pending', section: 'main' },
+    { to: '/revenue', icon: DollarSign, label: 'Revenue', section: 'main', adminOnly: false },
+    { to: '/packages', icon: Package, label: 'Tour Packages', section: 'main', adminOnly: false },
+    { to: '/tickets', icon: Plane, label: 'Tickets', section: 'main', adminOnly: false },
+    { to: '/visas', icon: FileCheck, label: 'Visas', section: 'main', adminOnly: false },
+    { to: '/expenses', icon: Receipt, label: 'Expenses', section: 'main', adminOnly: false },
+    { to: '/pending', icon: Clock, label: 'Pending', section: 'main', adminOnly: false },
     { to: '/reports', icon: FileText, label: 'Reports', section: 'main' },
     { to: '/accounting/chart-of-accounts', icon: Book, label: 'Chart of Accounts', section: 'accounting' },
     { to: '/accounting/trial-balance', icon: Scale, label: 'Trial Balance', section: 'accounting' },
     { to: '/accounting/cash-bank', icon: Wallet, label: 'Cash/Bank Book', section: 'accounting' },
     { to: '/accounting/gst', icon: ReceiptText, label: 'GST Summary', section: 'accounting' },
-    { to: '/accounting/invoices', icon: FileSpreadsheet, label: 'Invoices', section: 'accounting' },
+    { to: '/accounting/invoices', icon: FileSpreadsheet, label: 'Invoices', section: 'accounting', adminOnly: false },
+  ];
+
+  const adminMenuItems = [
+    { to: '/admin/settings', icon: Settings, label: 'Settings' },
+    { to: '/admin/users', icon: Users, label: 'User Management' },
   ];
 
   return (
