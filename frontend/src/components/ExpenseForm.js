@@ -11,6 +11,10 @@ function ExpenseForm({ expense, onClose }) {
     payment_mode: 'Cash',
     amount: 0,
     description: '',
+    purchase_type: 'General Expense',
+    supplier_gstin: '',
+    invoice_number: '',
+    gst_rate: 0
   });
 
   useEffect(() => {
