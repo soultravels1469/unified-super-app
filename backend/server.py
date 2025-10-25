@@ -53,6 +53,7 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     token: str
     username: str
+    role: str
 
 class Revenue(BaseModel):
     model_config = ConfigDict(extra="ignore")
