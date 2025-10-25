@@ -110,6 +110,52 @@ function ExpenseForm({ expense, onClose }) {
               />
             </div>
 
+            <div className="form-group">
+              <label>Purchase Type *</label>
+              <select name="purchase_type" value={formData.purchase_type} onChange={handleChange} data-testid="expense-purchase-type-select">
+                <option value="General Expense">General Expense</option>
+                <option value="Purchase for Resale">Purchase for Resale</option>
+                <option value="Office Use">Office Use</option>
+              </select>
+            </div>
+
+            {formData.purchase_type === 'Purchase for Resale' && (
+              <>
+                <div className="form-group">
+                  <label>Supplier GSTIN</label>
+                  <input
+                    type="text"
+                    name="supplier_gstin"
+                    value={formData.supplier_gstin}
+                    onChange={handleChange}
+                    placeholder="22AAAAA0000A1Z5"
+                    data-testid="expense-supplier-gstin-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Invoice Number</label>
+                  <input
+                    type="text"
+                    name="invoice_number"
+                    value={formData.invoice_number}
+                    onChange={handleChange}
+                    data-testid="expense-invoice-number-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>GST Rate (%)</label>
+                  <select name="gst_rate" value={formData.gst_rate} onChange={handleChange} data-testid="expense-gst-rate-select">
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                  </select>
+                </div>
+              </>
+            )}
+
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Description</label>
               <textarea
