@@ -107,6 +107,10 @@ class ExpenseCreate(BaseModel):
     payment_mode: str
     amount: float
     description: Optional[str] = ""
+    purchase_type: str = "General Expense"  # General Expense, Purchase for Resale, Office Use
+    supplier_gstin: Optional[str] = ""
+    invoice_number: Optional[str] = ""
+    gst_rate: Optional[float] = 0.0
 
 class ExpenseUpdate(BaseModel):
     date: Optional[str] = None
@@ -114,6 +118,10 @@ class ExpenseUpdate(BaseModel):
     payment_mode: Optional[str] = None
     amount: Optional[float] = None
     description: Optional[str] = None
+    purchase_type: Optional[str] = None
+    supplier_gstin: Optional[str] = None
+    invoice_number: Optional[str] = None
+    gst_rate: Optional[float] = None
 
 class DashboardSummary(BaseModel):
     total_revenue: float
