@@ -10,6 +10,11 @@ import Reports from '@/pages/Reports';
 import TourPackages from '@/pages/TourPackages';
 import Tickets from '@/pages/Tickets';
 import Visas from '@/pages/Visas';
+import ChartOfAccounts from '@/pages/ChartOfAccounts';
+import TrialBalance from '@/pages/TrialBalance';
+import CashBankBook from '@/pages/CashBankBook';
+import GSTSummary from '@/pages/GSTSummary';
+import InvoiceGenerator from '@/pages/InvoiceGenerator';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
