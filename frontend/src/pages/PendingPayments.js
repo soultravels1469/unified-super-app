@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API } from '@/App';
 import { toast } from 'sonner';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Edit2 } from 'lucide-react';
 import { groupByMonth, getAvailableMonths } from '@/utils/helpers';
 
 function PendingPayments() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState('all');
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [partialAmount, setPartialAmount] = useState(0);
 
   useEffect(() => {
     fetchPendingPayments();
@@ -37,6 +39,36 @@ function PendingPayments() {
       fetchPendingPayments();
     } catch (error) {
       toast.error('Failed to update payment status');
+    }
+  };
+
+  const handleEditClick = (payment) => {
+    setEditingPayment(payment);
+    setPartialAmount(0);
+  };
+
+  const handlePartialPayment = async () => {
+    if (partialAmount <= 0 || partialAmount > editingPayment.pending_amount) {
+      toast.error('Invalid partial payment amount');
+      return;
+    }
+
+    try {
+      const newReceived = editingPayment.received_amount + partialAmount;
+      const newPending = editingPayment.pending_amount - partialAmount;
+      
+      await axios.put(`${API}/revenue/${editingPayment.id}`, {
+        received_amount: newReceived,
+        pending_amount: newPending,
+        status: newPending === 0 ? 'Received' : 'Pending'
+      });
+      
+      toast.success('Partial payment recorded successfully');
+      setEditingPayment(null);
+      setPartialAmount(0);
+      fetchPendingPayments();
+    } catch (error) {
+      toast.error('Failed to record partial payment');
     }
   };
 
