@@ -33,15 +33,17 @@ function App() {
     setLoading(false);
   }, []);
 
-  const handleLogin = (token, username) => {
+  const handleLogin = (token, username, role) => {
     localStorage.setItem('token', token);
     localStorage.setItem('username', username);
+    localStorage.setItem('role', role);
     setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('role');
     setIsAuthenticated(false);
   };
 
