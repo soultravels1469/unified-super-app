@@ -208,6 +208,9 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="Revenue not found")
     
+    old_received = existing.get('received_amount', 0)
+    old_status = existing.get('status', 'Pending')
+    
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     if update_data:
         await db.revenues.update_one({"id": revenue_id}, {"$set": update_data})
@@ -215,6 +218,21 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
     updated = await db.revenues.find_one({"id": revenue_id}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    # Sync with accounting when status changes to Received or amount changes
+    new_received = updated.get('received_amount', 0)
+    new_status = updated.get('status', 'Pending')
+    
+    if (new_status == 'Received' and old_status != 'Received' and new_received > 0):
+        # Create new accounting entry
+        await accounting.create_revenue_ledger_entry(updated)
+    elif (new_status == 'Received' and old_status == 'Received' and new_received != old_received):
+        # Update existing accounting entry by removing old and creating new
+        await db.ledgers.delete_many({"reference_id": revenue_id})
+        await db.gst_records.delete_many({"reference_id": revenue_id})
+        if new_received > 0:
+            await accounting.create_revenue_ledger_entry(updated)
+    
     return Revenue(**updated)
 
 @api_router.delete("/revenue/{revenue_id}")
