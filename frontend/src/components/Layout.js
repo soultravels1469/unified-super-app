@@ -116,6 +116,21 @@ function Layout({ children, onLogout }) {
         .sidebar-nav {
           flex: 1;
           padding: 1.5rem 0;
+          overflow-y: auto;
+        }
+
+        .nav-section {
+          margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+          font-size: 0.75rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #94a3b8;
+          padding: 0.5rem 1.5rem;
+          margin-bottom: 0.5rem;
         }
 
         .nav-item {
