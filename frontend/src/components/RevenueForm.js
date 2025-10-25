@@ -73,7 +73,6 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
 
     setFormData(updatedData);
   };
-  };
 
   return (
     <div className="modal-overlay" data-testid="revenue-form-modal">
