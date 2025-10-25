@@ -1,18 +1,23 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet } from 'lucide-react';
 
 function Layout({ children, onLogout }) {
   const username = localStorage.getItem('username');
 
   const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/revenue', icon: DollarSign, label: 'Revenue' },
-    { to: '/packages', icon: Package, label: 'Tour Packages' },
-    { to: '/tickets', icon: Plane, label: 'Tickets' },
-    { to: '/visas', icon: FileCheck, label: 'Visas' },
-    { to: '/expenses', icon: Receipt, label: 'Expenses' },
-    { to: '/pending', icon: Clock, label: 'Pending' },
-    { to: '/reports', icon: FileText, label: 'Reports' },
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
+    { to: '/revenue', icon: DollarSign, label: 'Revenue', section: 'main' },
+    { to: '/packages', icon: Package, label: 'Tour Packages', section: 'main' },
+    { to: '/tickets', icon: Plane, label: 'Tickets', section: 'main' },
+    { to: '/visas', icon: FileCheck, label: 'Visas', section: 'main' },
+    { to: '/expenses', icon: Receipt, label: 'Expenses', section: 'main' },
+    { to: '/pending', icon: Clock, label: 'Pending', section: 'main' },
+    { to: '/reports', icon: FileText, label: 'Reports', section: 'main' },
+    { to: '/accounting/chart-of-accounts', icon: Book, label: 'Chart of Accounts', section: 'accounting' },
+    { to: '/accounting/trial-balance', icon: Scale, label: 'Trial Balance', section: 'accounting' },
+    { to: '/accounting/cash-bank', icon: Wallet, label: 'Cash/Bank Book', section: 'accounting' },
+    { to: '/accounting/gst', icon: ReceiptText, label: 'GST Summary', section: 'accounting' },
+    { to: '/accounting/invoices', icon: FileSpreadsheet, label: 'Invoices', section: 'accounting' },
   ];
 
   return (
