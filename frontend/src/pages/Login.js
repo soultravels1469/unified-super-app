@@ -19,7 +19,7 @@ function Login({ onLogin }) {
       });
 
       toast.success('Login successful!');
-      onLogin(response.data.token, response.data.username);
+      onLogin(response.data.token, response.data.username, response.data.role);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
     } finally {
