@@ -86,6 +86,8 @@ function App() {
                     <Route path="/accounting/cash-bank" element={<CashBankBook />} />
                     <Route path="/accounting/gst" element={<GSTSummary />} />
                     <Route path="/accounting/invoices" element={<InvoiceGenerator />} />
+                    <Route path="/admin/settings" element={<AdminSettings />} />
+                    <Route path="/admin/users" element={<UserManagement />} />
                   </Routes>
                 </Layout>
               ) : (
