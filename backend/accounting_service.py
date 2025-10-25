@@ -284,6 +284,7 @@ class AccountingService:
         gst_records = await self.db.gst_records.find(query, {'_id': 0}).to_list(1000)
         
         output_gst = {'cgst': 0, 'sgst': 0, 'igst': 0, 'total': 0}
+        input_gst = {'cgst': 0, 'sgst': 0, 'igst': 0, 'total': 0}
         
         for record in gst_records:
             if record['type'] == 'output':
@@ -291,6 +292,13 @@ class AccountingService:
                 output_gst['sgst'] += record['sgst']
                 output_gst['igst'] += record['igst']
                 output_gst['total'] += record['total_gst']
+            elif record['type'] == 'input':
+                input_gst['cgst'] += record['cgst']
+                input_gst['sgst'] += record['sgst']
+                input_gst['igst'] += record['igst']
+                input_gst['total'] += record['total_gst']
+        
+        net_payable = output_gst['total'] - input_gst['total']
         
         return {
             'output_gst': {
@@ -300,11 +308,45 @@ class AccountingService:
                 'total': round(output_gst['total'], 2)
             },
             'input_gst': {
-                'cgst': 0,
-                'sgst': 0,
-                'igst': 0,
-                'total': 0
+                'cgst': round(input_gst['cgst'], 2),
+                'sgst': round(input_gst['sgst'], 2),
+                'igst': round(input_gst['igst'], 2),
+                'total': round(input_gst['total'], 2)
             },
-            'net_gst_payable': round(output_gst['total'], 2),
+            'net_gst_payable': round(net_payable, 2),
             'records': gst_records
         }
+    
+    async def create_input_gst_record(self, expense_data: dict):
+        """Create GST input record for purchases"""
+        amount = expense_data['amount']
+        gst_rate = expense_data.get('gst_rate', 0) / 100
+        
+        # Calculate GST breakdown
+        taxable_amount = amount / (1 + gst_rate)
+        total_gst = amount - taxable_amount
+        cgst = total_gst / 2
+        sgst = total_gst / 2
+        
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
+        gst_record = {
+            'id': str(uuid.uuid4()),
+            'date': expense_data['date'],
+            'type': 'input',  # Input GST (purchases)
+            'invoice_number': expense_data.get('invoice_number', ''),
+            'supplier_gstin': expense_data.get('supplier_gstin', ''),
+            'category': expense_data['category'],
+            'taxable_amount': round(taxable_amount, 2),
+            'cgst': round(cgst, 2),
+            'sgst': round(sgst, 2),
+            'igst': 0.0,
+            'total_gst': round(total_gst, 2),
+            'total_amount': amount,
+            'gst_rate': expense_data.get('gst_rate', 0),
+            'reference_id': expense_data['id'],
+            'created_at': timestamp
+        }
+        
+        await self.db.gst_records.insert_one(gst_record)
+
