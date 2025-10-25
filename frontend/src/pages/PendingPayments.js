@@ -194,6 +194,83 @@ function PendingPayments() {
         ))
       )}
 
+      {editingPayment && (
+        <div className="modal-overlay" onClick={() => setEditingPayment(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Record Partial Payment</h3>
+            
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>Client:</strong> {editingPayment.client_name}
+              </div>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>Total Pending:</strong> ₹{editingPayment.pending_amount.toLocaleString()}
+              </div>
+              <div>
+                <strong>Already Received:</strong> ₹{editingPayment.received_amount.toLocaleString()}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Partial Payment Amount *</label>
+              <input
+                type="number"
+                value={partialAmount}
+                onChange={(e) => setPartialAmount(parseFloat(e.target.value) || 0)}
+                min="0"
+                max={editingPayment.pending_amount}
+                step="0.01"
+                placeholder="Enter amount received"
+                style={{ width: '100%' }}
+              />
+              <div style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.5rem' }}>
+                Remaining after payment: ₹{(editingPayment.pending_amount - partialAmount).toLocaleString()}
+              </div>
+            </div>
+
+            <div className="form-actions" style={{ marginTop: '2rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setEditingPayment(null)}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" onClick={handlePartialPayment}>
+                Record Payment
+              </button>
+            </div>
+          </div>
+
+          <style jsx>{`
+            .modal-overlay {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.5);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 1000;
+              padding: 1rem;
+            }
+
+            .modal-content {
+              background: white;
+              border-radius: 20px;
+              padding: 2rem;
+              max-height: 90vh;
+              overflow-y: auto;
+              box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+
+            .form-actions {
+              display: flex;
+              gap: 1rem;
+              justify-content: flex-end;
+            }
+          `}</style>
+        </div>
+      )}
+
       <style jsx>{`
         .month-section {
           margin-bottom: 2.5rem;
