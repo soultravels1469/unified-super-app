@@ -159,11 +159,21 @@ async def init_admin():
     admin = await db.users.find_one({"username": "admin"})
     if not admin:
         hashed_password = pwd_context.hash("admin123")
-        admin_user = User(username="admin", hashed_password=hashed_password)
+        admin_user = User(username="admin", hashed_password=hashed_password, role="admin")
         doc = admin_user.model_dump()
         doc['created_at'] = doc['created_at'].isoformat()
         await db.users.insert_one(doc)
         logging.info("Admin user created with username: admin, password: admin123")
+    
+    # Create viewer user for CA
+    viewer = await db.users.find_one({"username": "viewer"})
+    if not viewer:
+        hashed_password = pwd_context.hash("viewer123")
+        viewer_user = User(username="viewer", hashed_password=hashed_password, role="viewer")
+        doc = viewer_user.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.users.insert_one(doc)
+        logging.info("Viewer user created with username: viewer, password: viewer123")
 
 @app.on_event("startup")
 async def startup_event():
