@@ -106,7 +106,10 @@ function Layout({ children, onLogout }) {
         <div className="sidebar-footer">
           <div className="user-info" data-testid="user-info">
             <div className="user-avatar">{username?.[0]?.toUpperCase()}</div>
-            <span>{username}</span>
+            <div>
+              <div style={{ fontWeight: 600 }}>{username}</div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'capitalize' }}>{role}</div>
+            </div>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={onLogout} data-testid="logout-button">
             <LogOut size={16} />
