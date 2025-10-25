@@ -181,6 +181,11 @@ async def create_revenue(revenue: RevenueCreate):
     doc = revenue_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.revenues.insert_one(doc)
+    
+    # Create accounting ledger entry if revenue is received
+    if revenue_obj.status == 'Received' and revenue_obj.received_amount > 0:
+        await accounting.create_revenue_ledger_entry(revenue_obj.model_dump())
+    
     return revenue_obj
 
 @api_router.put("/revenue/{revenue_id}", response_model=Revenue)
