@@ -260,6 +260,10 @@ async def create_expense(expense: ExpenseCreate):
     # Create accounting ledger entry
     await accounting.create_expense_ledger_entry(expense_obj.model_dump())
     
+    # If purchase for resale, create GST input record
+    if expense_obj.purchase_type == "Purchase for Resale" and expense_obj.gst_rate > 0:
+        await accounting.create_input_gst_record(expense_obj.model_dump())
+    
     return expense_obj
 
 @api_router.put("/expenses/{expense_id}", response_model=Expense)
