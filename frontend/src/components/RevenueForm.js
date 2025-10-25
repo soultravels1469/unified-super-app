@@ -47,10 +47,32 @@ function RevenueForm({ revenue, onClose, defaultSource = '' }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    let updatedData = {
+      ...formData,
       [name]: name.includes('amount') ? parseFloat(value) || 0 : value,
-    }));
+    };
+
+    // Auto-calculate based on what changed
+    if (name === 'total_amount') {
+      const total = parseFloat(value) || 0;
+      updatedData.pending_amount = total - updatedData.received_amount;
+    } else if (name === 'received_amount') {
+      const received = parseFloat(value) || 0;
+      updatedData.pending_amount = updatedData.total_amount - received;
+    } else if (name === 'pending_amount') {
+      const pending = parseFloat(value) || 0;
+      updatedData.received_amount = updatedData.total_amount - pending;
+    }
+
+    // Auto-update status based on pending amount
+    if (updatedData.pending_amount === 0 && updatedData.received_amount > 0) {
+      updatedData.status = 'Received';
+    } else if (updatedData.pending_amount > 0) {
+      updatedData.status = 'Pending';
+    }
+
+    setFormData(updatedData);
+  };
   };
 
   return (
