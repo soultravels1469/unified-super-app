@@ -29,17 +29,35 @@ function Layout({ children, onLogout }) {
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
-            >
-              <item.icon size={20} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          <div className="nav-section">
+            <div className="nav-section-title">Main</div>
+            {navItems.filter(item => item.section === 'main').map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
+              >
+                <item.icon size={20} />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+          
+          <div className="nav-section">
+            <div className="nav-section-title">Accounting</div>
+            {navItems.filter(item => item.section === 'accounting').map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                data-testid={`nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
+              >
+                <item.icon size={20} />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
         </nav>
 
         <div className="sidebar-footer">
