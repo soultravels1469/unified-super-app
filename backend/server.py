@@ -154,6 +154,8 @@ async def init_admin():
 @app.on_event("startup")
 async def startup_event():
     await init_admin()
+    await accounting.initialize_accounts()
+    logging.info("Accounting system initialized")
 
 # Routes
 @api_router.post("/auth/login", response_model=LoginResponse)
