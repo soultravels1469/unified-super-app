@@ -99,6 +99,10 @@ class Expense(BaseModel):
     payment_mode: str
     amount: float
     description: Optional[str] = ""
+    purchase_type: str = "General Expense"
+    supplier_gstin: Optional[str] = ""
+    invoice_number: Optional[str] = ""
+    gst_rate: Optional[float] = 0.0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ExpenseCreate(BaseModel):
