@@ -336,6 +336,156 @@ async def get_reports(period: str = "month", year: Optional[int] = None, month: 
         expense_by_category=exp_by_category
     )
 
+# ===== ACCOUNTING ENDPOINTS =====
+
+@api_router.get("/accounting/chart-of-accounts")
+async def get_chart_of_accounts():
+    """Get all accounts"""
+    accounts = await db.accounts.find({}, {"_id": 0}).sort("type", 1).to_list(1000)
+    return {"accounts": accounts}
+
+@api_router.get("/accounting/ledger")
+async def get_ledger(account: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Get ledger entries"""
+    query = {}
+    if account:
+        query['account'] = account
+    if start_date and end_date:
+        query['date'] = {'$gte': start_date, '$lte': end_date}
+    
+    ledger_entries = await db.ledgers.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    return {"entries": ledger_entries}
+
+@api_router.get("/accounting/trial-balance")
+async def get_trial_balance():
+    """Generate trial balance"""
+    return await accounting.get_trial_balance()
+
+@api_router.get("/accounting/cash-book")
+async def get_cash_book(start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Get cash book entries"""
+    query = {'account': 'Cash'}
+    if start_date and end_date:
+        query['date'] = {'$gte': start_date, '$lte': end_date}
+    
+    entries = await db.ledgers.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    
+    # Calculate balance
+    opening_balance = 0.0
+    closing_balance = 0.0
+    for entry in entries:
+        if entry['debit'] > 0:
+            closing_balance += entry['debit']
+        if entry['credit'] > 0:
+            closing_balance -= entry['credit']
+    
+    return {
+        "entries": entries,
+        "opening_balance": opening_balance,
+        "closing_balance": round(closing_balance, 2)
+    }
+
+@api_router.get("/accounting/bank-book")
+async def get_bank_book(start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Get bank book entries"""
+    query = {'account': {'$regex': 'Bank'}}
+    if start_date and end_date:
+        query['date'] = {'$gte': start_date, '$lte': end_date}
+    
+    entries = await db.ledgers.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    
+    # Calculate balance
+    opening_balance = 0.0
+    closing_balance = 0.0
+    for entry in entries:
+        if entry['debit'] > 0:
+            closing_balance += entry['debit']
+        if entry['credit'] > 0:
+            closing_balance -= entry['credit']
+    
+    return {
+        "entries": entries,
+        "opening_balance": opening_balance,
+        "closing_balance": round(closing_balance, 2)
+    }
+
+@api_router.get("/accounting/gst-summary")
+async def get_gst_summary(start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Get GST summary"""
+    return await accounting.get_gst_summary(start_date, end_date)
+
+@api_router.get("/accounting/gst-invoice/{revenue_id}")
+async def get_gst_invoice(revenue_id: str):
+    """Get GST invoice data for a revenue entry"""
+    revenue = await db.revenues.find_one({"id": revenue_id}, {"_id": 0})
+    if not revenue:
+        raise HTTPException(status_code=404, detail="Revenue not found")
+    
+    gst_record = await db.gst_records.find_one({"reference_id": revenue_id}, {"_id": 0})
+    
+    if not gst_record:
+        # Generate GST breakdown if not exists
+        gst_breakdown = accounting.calculate_gst(revenue['received_amount'], revenue['source'])
+        invoice_data = {
+            'invoice_number': f"INV-{revenue_id[:8].upper()}",
+            'date': revenue['date'],
+            'client_name': revenue['client_name'],
+            'service_type': revenue['source'],
+            'taxable_amount': gst_breakdown['taxable_amount'],
+            'cgst': gst_breakdown['cgst'],
+            'sgst': gst_breakdown['sgst'],
+            'igst': gst_breakdown['igst'],
+            'total_gst': gst_breakdown['total_gst'],
+            'total_amount': revenue['received_amount'],
+            'gst_rate': gst_breakdown['gst_rate']
+        }
+    else:
+        invoice_data = gst_record
+    
+    return invoice_data
+
+@api_router.post("/accounting/manual-journal")
+async def create_manual_journal(entry_data: Dict[str, Any]):
+    """Create manual journal entry"""
+    entry_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    debit_entry = {
+        'id': str(uuid.uuid4()),
+        'entry_id': entry_id,
+        'date': entry_data['date'],
+        'account': entry_data['debit_account'],
+        'account_type': entry_data['debit_account_type'],
+        'debit': entry_data['amount'],
+        'credit': 0.0,
+        'description': entry_data['narration'],
+        'reference_type': 'manual',
+        'reference_id': entry_id,
+        'created_at': timestamp
+    }
+    
+    credit_entry = {
+        'id': str(uuid.uuid4()),
+        'entry_id': entry_id,
+        'date': entry_data['date'],
+        'account': entry_data['credit_account'],
+        'account_type': entry_data['credit_account_type'],
+        'debit': 0.0,
+        'credit': entry_data['amount'],
+        'description': entry_data['narration'],
+        'reference_type': 'manual',
+        'reference_id': entry_id,
+        'created_at': timestamp
+    }
+    
+    await db.ledgers.insert_many([debit_entry, credit_entry])
+    
+    # Update account balances
+    await accounting.update_account_balance(entry_data['debit_account'], entry_data['amount'], 'debit')
+    await accounting.update_account_balance(entry_data['credit_account'], entry_data['amount'], 'credit')
+    
+    return {"message": "Journal entry created successfully", "entry_id": entry_id}
+
 # Include the router in the main app
 app.include_router(api_router)
 
