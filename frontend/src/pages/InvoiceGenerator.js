@@ -345,23 +345,38 @@ function InvoiceGenerator() {
               </div>
             </div>
 
-            {adminSettings?.bank_name && (
-              <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px solid #e2e8f0' }}>
-                <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Bank Details</h4>
-                <div style={{ fontSize: '0.9375rem', color: '#475569' }}>
-                  <div>Bank Name: {adminSettings.bank_name}</div>
-                  {adminSettings.account_number && <div>Account Number: {adminSettings.account_number}</div>}
-                  {adminSettings.ifsc_code && <div>IFSC Code: {adminSettings.ifsc_code}</div>}
-                  {adminSettings.branch && <div>Branch: {adminSettings.branch}</div>}
+            {/* Bank Details - Get default bank account */}
+            {adminSettings?.bank_accounts && adminSettings.bank_accounts.length > 0 && (() => {
+              const defaultBank = adminSettings.bank_accounts.find(acc => acc.is_default) || adminSettings.bank_accounts[0];
+              return (
+                <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px solid #e2e8f0' }}>
+                  <h4 style={{ fontWeight: 600, marginBottom: '1rem', color: '#1a202c' }}>Bank Details</h4>
+                  <div style={{ fontSize: '0.9375rem', color: '#475569', display: 'grid', gap: '0.5rem' }}>
+                    <div><strong>Bank:</strong> {defaultBank.bank_name}</div>
+                    <div><strong>Account Holder:</strong> {defaultBank.account_holder_name}</div>
+                    <div><strong>Account Number:</strong> {defaultBank.account_number}</div>
+                    <div><strong>IFSC Code:</strong> {defaultBank.ifsc_code}</div>
+                    {defaultBank.branch && <div><strong>Branch:</strong> {defaultBank.branch}</div>}
+                    {defaultBank.upi_id && <div><strong>UPI ID:</strong> {defaultBank.upi_id}</div>}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
+            {/* Terms & Footer */}
             <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                <p><strong>Terms & Conditions:</strong></p>
-                <p>This is a computer-generated invoice and does not require a signature.</p>
-                <p>Payment due within 30 days of invoice date.</p>
+                {adminSettings?.invoice_terms && (
+                  <>
+                    <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Terms & Conditions:</p>
+                    <p style={{ whiteSpace: 'pre-line', marginBottom: '1rem' }}>{adminSettings.invoice_terms}</p>
+                  </>
+                )}
+                {adminSettings?.invoice_footer && (
+                  <p style={{ fontStyle: 'italic', textAlign: 'center', marginTop: '1rem' }}>
+                    {adminSettings.invoice_footer}
+                  </p>
+                )}
               </div>
             </div>
           </div>
