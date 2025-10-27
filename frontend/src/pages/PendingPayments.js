@@ -87,14 +87,14 @@ function PendingPayments() {
     }
   };
 
-  const availableMonths = getAvailableMonths(pendingPayments);
-  const groupedPayments = groupByMonth(pendingPayments);
+  const availableMonths = getAvailableMonths(filteredPayments);
+  const groupedPayments = groupByMonth(filteredPayments);
   
   const filteredMonths = selectedMonth === 'all' 
     ? Object.entries(groupedPayments)
     : [[selectedMonth, groupedPayments[selectedMonth] || []]];
 
-  const totalPending = pendingPayments.reduce((sum, p) => sum + p.pending_amount, 0);
+  const totalPending = filteredPayments.reduce((sum, p) => sum + p.pending_amount, 0);
   const filteredTotal = selectedMonth === 'all'
     ? totalPending
     : (groupedPayments[selectedMonth] || []).reduce((sum, p) => sum + p.pending_amount, 0);
