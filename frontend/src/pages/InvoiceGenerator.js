@@ -69,69 +69,105 @@ function InvoiceGenerator() {
     doc.setFont(undefined, 'bold');
     doc.text(adminSettings?.company_name || 'Soul Immigration & Travels', 20, 20);
     
+    // Company Tagline
+    if (adminSettings?.company_tagline) {
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'italic');
+      doc.text(adminSettings.company_tagline, 20, 27);
+    }
+    
     // Invoice Title
     doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
     doc.text('TAX INVOICE', 150, 20);
     
     // Company Details
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    if (adminSettings?.address) doc.text(adminSettings.address, 20, 30);
-    if (adminSettings?.phone) doc.text(`Phone: ${adminSettings.phone}`, 20, 35);
-    if (adminSettings?.email) doc.text(`Email: ${adminSettings.email}`, 20, 40);
-    if (adminSettings?.gstin) doc.text(`GSTIN: ${adminSettings.gstin}`, 20, 45);
+    let yPos = 35;
+    if (adminSettings?.company_address) {
+      const addressLines = doc.splitTextToSize(adminSettings.company_address, 120);
+      doc.text(addressLines, 20, yPos);
+      yPos += addressLines.length * 5;
+    }
+    if (adminSettings?.company_contact) doc.text(`Phone: ${adminSettings.company_contact}`, 20, yPos += 5);
+    if (adminSettings?.company_email) doc.text(`Email: ${adminSettings.company_email}`, 20, yPos += 5);
+    if (adminSettings?.gstin) doc.text(`GSTIN: ${adminSettings.gstin}`, 20, yPos += 5);
     
     // Invoice Details
-    doc.text(`Invoice No: ${data.invoice_number}`, 150, 30);
-    doc.text(`Date: ${data.date}`, 150, 35);
+    const invoicePrefix = adminSettings?.invoice_prefix || 'INV';
+    doc.text(`Invoice No: ${invoicePrefix}-${data.invoice_number}`, 150, 35);
+    doc.text(`Date: ${data.date}`, 150, 42);
     
     // Bill To
     doc.setFont(undefined, 'bold');
-    doc.text('Bill To:', 20, 60);
+    doc.text('Bill To:', 20, yPos += 15);
     doc.setFont(undefined, 'normal');
-    doc.text(data.client_name, 20, 65);
+    doc.text(data.client_name, 20, yPos += 5);
     
     // Table
+    const tableStartY = yPos + 15;
     doc.setFont(undefined, 'bold');
-    doc.text('Description', 20, 85);
-    doc.text('Amount', 170, 85);
-    doc.line(20, 87, 190, 87);
+    doc.text('Description', 20, tableStartY);
+    doc.text('Amount', 170, tableStartY);
+    doc.line(20, tableStartY + 2, 190, tableStartY + 2);
     
     doc.setFont(undefined, 'normal');
-    doc.text(`${data.service_type} Services`, 20, 95);
-    doc.text(`₹${data.taxable_amount?.toLocaleString()}`, 170, 95);
+    doc.text(`${data.service_type} Services`, 20, tableStartY + 10);
+    doc.text(`₹${data.taxable_amount?.toLocaleString()}`, 170, tableStartY + 10);
     
     // GST Breakdown
-    doc.line(20, 100, 190, 100);
-    doc.text(`CGST @ ${data.gst_rate / 2}%`, 20, 108);
-    doc.text(`₹${data.cgst?.toLocaleString()}`, 170, 108);
-    doc.text(`SGST @ ${data.gst_rate / 2}%`, 20, 115);
-    doc.text(`₹${data.sgst?.toLocaleString()}`, 170, 115);
+    doc.line(20, tableStartY + 15, 190, tableStartY + 15);
+    doc.text(`CGST @ ${data.gst_rate / 2}%`, 20, tableStartY + 23);
+    doc.text(`₹${data.cgst?.toLocaleString()}`, 170, tableStartY + 23);
+    doc.text(`SGST @ ${data.gst_rate / 2}%`, 20, tableStartY + 30);
+    doc.text(`₹${data.sgst?.toLocaleString()}`, 170, tableStartY + 30);
     
     // Total
-    doc.line(20, 120, 190, 120);
+    doc.line(20, tableStartY + 35, 190, tableStartY + 35);
     doc.setFont(undefined, 'bold');
     doc.setFontSize(12);
-    doc.text('Total Amount', 20, 128);
-    doc.text(`₹${data.total_amount?.toLocaleString()}`, 170, 128);
+    doc.text('Total Amount', 20, tableStartY + 43);
+    doc.text(`₹${data.total_amount?.toLocaleString()}`, 170, tableStartY + 43);
     
-    // Bank Details
-    if (adminSettings?.bank_name) {
+    // Bank Details - Get default bank account
+    const defaultBank = adminSettings?.bank_accounts?.find(acc => acc.is_default) || adminSettings?.bank_accounts?.[0];
+    let bankYPos = tableStartY + 60;
+    
+    if (defaultBank) {
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
-      doc.text('Bank Details:', 20, 150);
+      doc.text('Bank Details:', 20, bankYPos);
       doc.setFont(undefined, 'normal');
-      doc.text(`Bank: ${adminSettings.bank_name}`, 20, 155);
-      if (adminSettings.account_number) doc.text(`Account: ${adminSettings.account_number}`, 20, 160);
-      if (adminSettings.ifsc_code) doc.text(`IFSC: ${adminSettings.ifsc_code}`, 20, 165);
-      if (adminSettings.branch) doc.text(`Branch: ${adminSettings.branch}`, 20, 170);
+      doc.text(`Bank: ${defaultBank.bank_name}`, 20, bankYPos += 5);
+      doc.text(`Account Holder: ${defaultBank.account_holder_name}`, 20, bankYPos += 5);
+      doc.text(`Account No: ${defaultBank.account_number}`, 20, bankYPos += 5);
+      doc.text(`IFSC: ${defaultBank.ifsc_code}`, 20, bankYPos += 5);
+      if (defaultBank.branch) doc.text(`Branch: ${defaultBank.branch}`, 20, bankYPos += 5);
+      if (defaultBank.upi_id) doc.text(`UPI: ${defaultBank.upi_id}`, 20, bankYPos += 5);
+    }
+    
+    // Terms & Conditions
+    if (adminSettings?.invoice_terms) {
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('Terms & Conditions:', 20, bankYPos + 15);
+      doc.setFont(undefined, 'normal');
+      const termsLines = doc.splitTextToSize(adminSettings.invoice_terms, 170);
+      doc.text(termsLines, 20, bankYPos + 20);
     }
     
     // Footer
-    doc.setFontSize(8);
-    doc.text('This is a computer-generated invoice and does not require a signature.', 20, 280);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'italic');
+    const footer = adminSettings?.invoice_footer || 'Thank you for your business!';
+    doc.text(footer, 105, 275, { align: 'center' });
     
-    doc.save(`Invoice_${data.invoice_number}.pdf`);
+    doc.setFontSize(8);
+    doc.text('This is a computer-generated invoice', 105, 280, { align: 'center' });
+    
+    const invoiceFileName = `${invoicePrefix}_${data.invoice_number}.pdf`;
+    doc.save(invoiceFileName);
     toast.success('Invoice downloaded successfully!');
   };
 
