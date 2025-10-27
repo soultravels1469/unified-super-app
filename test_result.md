@@ -101,3 +101,168 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  Build a professional, centralized Admin Settings panel with:
+  1. Admin Settings UI with 4 tabs: Branding, Bank Details, Invoice Customization, Data Control
+  2. Branding: Logo upload, company details (name, address, contact, tagline, GSTIN)
+  3. Bank Details: Multiple bank accounts with CRUD operations, mark default
+  4. Invoice Customization: Prefix, tax%, footer, terms, signature upload, logo toggle
+  5. Data Control: Export/Import functionality, clear test data
+  6. Full integration with Invoice Generator and Dashboard
+  7. Real-time sync between Revenue/Expense and Accounts sections
+
+backend:
+  - task: "Admin settings GET endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Extended admin settings endpoint to return comprehensive settings including branding, bank_accounts array, invoice customization fields"
+  
+  - task: "Admin settings POST endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated to handle comprehensive settings with all new fields"
+  
+  - task: "Logo upload endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/admin/upload-logo - Handles image file upload, validates file type, saves to /uploads directory, returns path"
+  
+  - task: "Signature upload endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/admin/upload-signature - Handles image file upload for digital signature"
+  
+  - task: "Bank accounts CRUD endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/admin/settings/bank-accounts - Add bank account, PUT /{account_id} - Update, DELETE /{account_id} - Delete. Supports marking default account"
+  
+  - task: "Static files serving for uploads"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Mounted /uploads directory using StaticFiles to serve uploaded logos and signatures"
+
+frontend:
+  - task: "Admin Settings UI with 4 tabs"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminSettings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Complete rewrite with tabbed interface - Branding, Bank Details, Invoice Settings, Data Control tabs. All tabs tested and working via screenshot"
+  
+  - task: "Branding tab - Logo upload with preview"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminSettings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Logo file upload with preview functionality, company details form fields working"
+  
+  - task: "Bank Details tab - Multiple accounts management"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminSettings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Add/Edit/Delete bank accounts, modal form for bank account details, mark default functionality"
+  
+  - task: "Invoice Settings tab - Customization fields"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminSettings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Invoice prefix, tax percentage, footer, terms, signature upload with preview, logo toggle checkbox"
+  
+  - task: "Data Control tab - Export/Import UI"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminSettings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Export buttons for Revenue/Expenses/Accounts/Trial Balance, CSV import placeholder, Clear test data button with warning"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Admin settings GET endpoint"
+    - "Admin settings POST endpoint"
+    - "Logo upload endpoint"
+    - "Signature upload endpoint"
+    - "Bank accounts CRUD endpoints"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Implemented complete Admin Settings feature with 4 tabs. All frontend UI tested via screenshot and working. Backend endpoints implemented including file uploads, bank accounts CRUD, and comprehensive settings management. Need backend testing agent to test all new API endpoints."
