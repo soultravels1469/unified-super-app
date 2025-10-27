@@ -629,12 +629,12 @@ async def upload_logo(file: UploadFile = File(...)):
 @api_router.post("/admin/upload-signature")
 async def upload_signature(file: UploadFile = File(...)):
     """Upload digital signature"""
+    # Validate file type
+    allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, WEBP) are allowed")
+    
     try:
-        # Validate file type
-        allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
-        if file.content_type not in allowed_types:
-            raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, WEBP) are allowed")
-        
         # Generate unique filename
         file_extension = file.filename.split('.')[-1]
         unique_filename = f"signature_{uuid.uuid4()}.{file_extension}"
