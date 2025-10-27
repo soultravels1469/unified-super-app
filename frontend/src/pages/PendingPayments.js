@@ -23,12 +23,25 @@ function PendingPayments() {
       const response = await axios.get(`${API}/revenue`);
       const pending = response.data.filter((rev) => rev.status === 'Pending' && rev.pending_amount > 0);
       setPendingPayments(pending);
+      setFilteredPayments(pending);
     } catch (error) {
       toast.error('Failed to load pending payments');
     } finally {
       setLoading(false);
     }
   };
+
+  // Search filter
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = pendingPayments.filter(p => 
+        p.client_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredPayments(filtered);
+    } else {
+      setFilteredPayments(pendingPayments);
+    }
+  }, [searchTerm, pendingPayments]);
 
   const markAsPaid = async (payment) => {
     try {
