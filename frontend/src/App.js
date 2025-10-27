@@ -89,6 +89,7 @@ function App() {
                     <Route path="/accounting/invoices" element={<InvoiceGenerator />} />
                     <Route path="/admin/settings" element={<AdminSettings />} />
                     <Route path="/admin/users" element={<UserManagement />} />
+                    <Route path="/admin/data" element={<DataManagement />} />
                   </Routes>
                 </Layout>
               ) : (
