@@ -603,12 +603,12 @@ async def update_admin_settings(settings: Dict[str, Any]):
 @api_router.post("/admin/upload-logo")
 async def upload_logo(file: UploadFile = File(...)):
     """Upload company logo"""
+    # Validate file type
+    allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, WEBP) are allowed")
+    
     try:
-        # Validate file type
-        allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
-        if file.content_type not in allowed_types:
-            raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, WEBP) are allowed")
-        
         # Generate unique filename
         file_extension = file.filename.split('.')[-1]
         unique_filename = f"logo_{uuid.uuid4()}.{file_extension}"
