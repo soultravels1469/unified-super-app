@@ -620,6 +620,54 @@ async def change_password(username: str, password_data: Dict[str, str]):
     
     return {"message": "Password updated successfully"}
 
+# ===== DATA MANAGEMENT ENDPOINTS =====
+
+@api_router.delete("/admin/clear-test-data")
+async def clear_test_data():
+    """Clear all test/demo data from accounting tables"""
+    try:
+        await db.ledgers.delete_many({})
+        await db.gst_records.delete_many({})
+        # Reset account balances
+        await db.accounts.update_many({}, {"$set": {"balance": 0.0}})
+        
+        return {"message": "Test data cleared successfully", "cleared": ["ledgers", "gst_records", "account_balances"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/rebuild-accounting")
+async def rebuild_accounting_data():
+    """Rebuild all accounting entries from existing revenue and expense data"""
+    try:
+        # Clear existing accounting data
+        await db.ledgers.delete_many({})
+        await db.gst_records.delete_many({})
+        await db.accounts.update_many({}, {"$set": {"balance": 0.0}})
+        
+        # Rebuild from revenues
+        revenues = await db.revenues.find({"status": "Received", "received_amount": {"$gt": 0}}, {"_id": 0}).to_list(1000)
+        revenue_count = 0
+        for rev in revenues:
+            await accounting.create_revenue_ledger_entry(rev)
+            revenue_count += 1
+        
+        # Rebuild from expenses
+        expenses = await db.expenses.find({}, {"_id": 0}).to_list(1000)
+        expense_count = 0
+        for exp in expenses:
+            await accounting.create_expense_ledger_entry(exp)
+            if exp.get('purchase_type') == 'Purchase for Resale' and exp.get('gst_rate', 0) > 0:
+                await accounting.create_input_gst_record(exp)
+            expense_count += 1
+        
+        return {
+            "message": "Accounting data rebuilt successfully",
+            "revenues_processed": revenue_count,
+            "expenses_processed": expense_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include the router in the main app
 app.include_router(api_router)
 
