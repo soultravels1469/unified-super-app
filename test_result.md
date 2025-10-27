@@ -203,6 +203,54 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Static file serving via /uploads/{filename} working correctly. Uploaded logo and signature files are accessible via HTTPS URLs. Files properly saved to /app/backend/uploads/ directory with correct permissions."
 
+  - task: "Revenue DELETE accounting sync"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Revenue DELETE sync working perfectly. Created revenue with status='Received' and received_amount=50000, verified 4 ledger entries created (Bank debit 50000, Visa Revenue credit 42372.88, CGST credit 3813.56, SGST credit 3813.56). After DELETE, all ledger and GST records with reference_id successfully removed. Complete sync verified."
+
+  - task: "Expense UPDATE accounting sync"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Expense UPDATE sync working perfectly. Created expense with amount=10000, verified 2 ledger entries (Office Supplies debit 10000, Cash credit 10000). Updated amount to 20000, verified old entries deleted and new entries created with correct amounts (Office Supplies debit 20000, Cash credit 20000). Amount sync verified."
+
+  - task: "Expense DELETE accounting sync"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Expense DELETE sync working perfectly. Created expense with amount=15000, verified 2 ledger entries (Travel debit 15000, Bank credit 15000). After DELETE, all ledger entries with reference_id successfully removed. Complete sync verified."
+
+  - task: "Expense with GST UPDATE and DELETE sync"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Expense with GST sync working perfectly. Created expense with purchase_type='Purchase for Resale', gst_rate=18, amount=25000. Verified 2 ledger entries and 1 GST record created. Updated amount to 35000, verified both ledger and GST records updated correctly. After DELETE, all ledger and GST records removed. Complete GST sync verified."
+
 frontend:
   - task: "Admin Settings UI with 4 tabs"
     implemented: true
