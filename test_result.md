@@ -320,11 +320,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Admin settings GET endpoint"
-    - "Admin settings POST endpoint"
-    - "Logo upload endpoint"
-    - "Signature upload endpoint"
-    - "Bank accounts CRUD endpoints"
+    - "Revenue DELETE accounting sync"
+    - "Expense UPDATE accounting sync"
+    - "Expense DELETE accounting sync"
+    - "Expense with GST UPDATE and DELETE sync"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
