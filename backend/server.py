@@ -724,7 +724,12 @@ async def delete_bank_account(account_id: str):
         raise HTTPException(status_code=404, detail="Settings not found")
     
     bank_accounts = settings.get('bank_accounts', [])
+    original_count = len(bank_accounts)
     bank_accounts = [acc for acc in bank_accounts if acc['id'] != account_id]
+    
+    # Check if account was actually found and removed
+    if len(bank_accounts) == original_count:
+        raise HTTPException(status_code=404, detail="Bank account not found")
     
     await db.admin_settings.update_one(
         {},
