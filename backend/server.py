@@ -542,23 +542,47 @@ async def create_manual_journal(entry_data: Dict[str, Any]):
 
 # ===== ADMIN SETTINGS ENDPOINTS =====
 
+# Pydantic models for settings
+class BankAccount(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    account_holder_name: str
+    bank_name: str
+    account_number: str
+    ifsc_code: str
+    branch: str
+    upi_id: Optional[str] = ""
+    is_default: bool = False
+
 @api_router.get("/admin/settings")
 async def get_admin_settings():
-    """Get admin settings"""
+    """Get comprehensive admin settings"""
     settings = await db.admin_settings.find_one({}, {"_id": 0})
     if not settings:
         # Return default settings
         return {
+            "id": str(uuid.uuid4()),
+            # Branding
             "company_name": "Soul Immigration & Travels",
+            "company_address": "",
+            "company_contact": "",
+            "company_email": "",
+            "company_tagline": "",
+            "logo_path": "",
             "gstin": "",
-            "logo_url": "",
-            "bank_name": "",
-            "account_number": "",
-            "ifsc_code": "",
-            "branch": "",
+            # Bank Details (array of accounts)
+            "bank_accounts": [],
+            # Invoice Customization
+            "invoice_prefix": "SOUL",
+            "default_tax_percentage": 18.0,
+            "invoice_footer": "Thank you for your business!",
+            "invoice_terms": "",
+            "signature_path": "",
+            "show_logo_on_invoice": True,
+            # Other
             "address": "",
             "phone": "",
-            "email": ""
+            "email": "",
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
     return settings
 
@@ -574,7 +598,140 @@ async def update_admin_settings(settings: Dict[str, Any]):
         settings['id'] = str(uuid.uuid4())
         await db.admin_settings.insert_one(settings)
     
-    return {"message": "Settings updated successfully"}
+    return {"message": "Settings updated successfully", "settings": settings}
+
+@api_router.post("/admin/upload-logo")
+async def upload_logo(file: UploadFile = File(...)):
+    """Upload company logo"""
+    try:
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, WEBP) are allowed")
+        
+        # Generate unique filename
+        file_extension = file.filename.split('.')[-1]
+        unique_filename = f"logo_{uuid.uuid4()}.{file_extension}"
+        file_path = UPLOAD_DIR / unique_filename
+        
+        # Save file
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Return relative path
+        return {
+            "message": "Logo uploaded successfully",
+            "logo_path": f"/uploads/{unique_filename}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload logo: {str(e)}")
+
+@api_router.post("/admin/upload-signature")
+async def upload_signature(file: UploadFile = File(...)):
+    """Upload digital signature"""
+    try:
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="Only image files (JPEG, PNG, WEBP) are allowed")
+        
+        # Generate unique filename
+        file_extension = file.filename.split('.')[-1]
+        unique_filename = f"signature_{uuid.uuid4()}.{file_extension}"
+        file_path = UPLOAD_DIR / unique_filename
+        
+        # Save file
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Return relative path
+        return {
+            "message": "Signature uploaded successfully",
+            "signature_path": f"/uploads/{unique_filename}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload signature: {str(e)}")
+
+@api_router.post("/admin/settings/bank-accounts")
+async def add_bank_account(account: BankAccount):
+    """Add a new bank account"""
+    settings = await db.admin_settings.find_one({})
+    
+    if not settings:
+        # Create default settings with this bank account
+        settings = {
+            "id": str(uuid.uuid4()),
+            "company_name": "Soul Immigration & Travels",
+            "bank_accounts": [account.dict()],
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.admin_settings.insert_one(settings)
+    else:
+        # If this is marked as default, unset other defaults
+        if account.is_default:
+            for acc in settings.get('bank_accounts', []):
+                acc['is_default'] = False
+        
+        # Add new account
+        bank_accounts = settings.get('bank_accounts', [])
+        bank_accounts.append(account.dict())
+        await db.admin_settings.update_one(
+            {},
+            {"$set": {"bank_accounts": bank_accounts, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"message": "Bank account added successfully", "account": account}
+
+@api_router.put("/admin/settings/bank-accounts/{account_id}")
+async def update_bank_account(account_id: str, account_data: Dict[str, Any]):
+    """Update a bank account"""
+    settings = await db.admin_settings.find_one({})
+    
+    if not settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    bank_accounts = settings.get('bank_accounts', [])
+    account_found = False
+    
+    # If this is marked as default, unset other defaults
+    if account_data.get('is_default'):
+        for acc in bank_accounts:
+            if acc['id'] != account_id:
+                acc['is_default'] = False
+    
+    for i, acc in enumerate(bank_accounts):
+        if acc['id'] == account_id:
+            bank_accounts[i] = {**acc, **account_data, 'id': account_id}
+            account_found = True
+            break
+    
+    if not account_found:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    await db.admin_settings.update_one(
+        {},
+        {"$set": {"bank_accounts": bank_accounts, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Bank account updated successfully"}
+
+@api_router.delete("/admin/settings/bank-accounts/{account_id}")
+async def delete_bank_account(account_id: str):
+    """Delete a bank account"""
+    settings = await db.admin_settings.find_one({})
+    
+    if not settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    bank_accounts = settings.get('bank_accounts', [])
+    bank_accounts = [acc for acc in bank_accounts if acc['id'] != account_id]
+    
+    await db.admin_settings.update_one(
+        {},
+        {"$set": {"bank_accounts": bank_accounts, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Bank account deleted successfully"}
 
 # ===== USER MANAGEMENT ENDPOINTS =====
 
