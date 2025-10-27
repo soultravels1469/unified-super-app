@@ -836,6 +836,9 @@ async def rebuild_accounting_data():
 # Include the router in the main app
 app.include_router(api_router)
 
+# Mount uploads directory for serving files
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
