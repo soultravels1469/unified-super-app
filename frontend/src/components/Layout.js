@@ -26,6 +26,7 @@ function Layout({ children, onLogout }) {
   const adminMenuItems = [
     { to: '/admin/settings', icon: Settings, label: 'Settings' },
     { to: '/admin/users', icon: Users, label: 'User Management' },
+    { to: '/admin/data', icon: Database, label: 'Data Management' },
   ];
 
   return (
