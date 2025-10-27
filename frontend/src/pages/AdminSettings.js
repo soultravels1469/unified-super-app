@@ -267,7 +267,7 @@ function AdminSettings() {
         {[
           { id: 'branding', label: 'Branding' },
           { id: 'bank', label: 'Bank Details' },
-          { id: 'invoice', label: 'Invoice' },
+          { id: 'invoice', label: 'Invoice Settings' },
           { id: 'data', label: 'Data Control' }
         ].map(tab => (
           <button
