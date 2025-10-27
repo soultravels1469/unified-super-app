@@ -7,10 +7,12 @@ import { groupByMonth, getAvailableMonths } from '@/utils/helpers';
 
 function PendingPayments() {
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [filteredPayments, setFilteredPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [editingPayment, setEditingPayment] = useState(null);
   const [partialAmount, setPartialAmount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchPendingPayments();
