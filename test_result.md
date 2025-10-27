@@ -119,11 +119,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Extended admin settings endpoint to return comprehensive settings including branding, bank_accounts array, invoice customization fields"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/admin/settings returns comprehensive default settings with all required fields (company_name, company_address, bank_accounts, invoice_prefix, etc.). Endpoint working correctly."
   
   - task: "Admin settings POST endpoint"
     implemented: true
@@ -131,11 +134,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Updated to handle comprehensive settings with all new fields"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/admin/settings successfully saves comprehensive settings including company details, branding, invoice customization. All fields persist correctly and can be retrieved via GET."
   
   - task: "Logo upload endpoint"
     implemented: true
@@ -143,11 +149,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/admin/upload-logo - Handles image file upload, validates file type, saves to /uploads directory, returns path"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/admin/upload-logo successfully uploads image files (PNG, JPEG, WEBP), validates file types (rejects non-images with 400), saves to /app/backend/uploads/, returns correct path (/uploads/logo_*.ext), files accessible via static serving. Fixed minor issue with error handling."
   
   - task: "Signature upload endpoint"
     implemented: true
@@ -155,11 +164,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/admin/upload-signature - Handles image file upload for digital signature"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/admin/upload-signature works identically to logo upload - validates file types, saves to /uploads/signature_*.ext, files accessible via static serving. All functionality verified."
   
   - task: "Bank accounts CRUD endpoints"
     implemented: true
@@ -167,11 +179,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/admin/settings/bank-accounts - Add bank account, PUT /{account_id} - Update, DELETE /{account_id} - Delete. Supports marking default account"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All bank account CRUD operations working - POST adds accounts with unique IDs, PUT updates existing accounts (404 for non-existent), DELETE removes accounts (404 for non-existent after fix), default account logic works correctly. Fixed DELETE endpoint to properly return 404 for non-existent accounts."
   
   - task: "Static files serving for uploads"
     implemented: true
@@ -179,11 +194,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Mounted /uploads directory using StaticFiles to serve uploaded logos and signatures"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Static file serving via /uploads/{filename} working correctly. Uploaded logo and signature files are accessible via HTTPS URLs. Files properly saved to /app/backend/uploads/ directory with correct permissions."
 
 frontend:
   - task: "Admin Settings UI with 4 tabs"
