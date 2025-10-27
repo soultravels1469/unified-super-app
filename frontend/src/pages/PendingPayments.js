@@ -107,27 +107,34 @@ function PendingPayments() {
     <div className="page-container" data-testid="pending-payments-page">
       <h1 className="page-title" data-testid="pending-payments-title">Pending Payments</h1>
 
-      <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.5rem', fontWeight: 500 }}>Total Pending Amount</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#f59e0b' }} data-testid="total-pending-amount">
-              ₹{filteredTotal.toLocaleString()}
-            </div>
+      <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1', minWidth: '250px' }}>
+            <input
+              type="text"
+              placeholder="Search by client name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '12px',
+                border: '2px solid #e2e8f0',
+                fontSize: '0.9375rem'
+              }}
+            />
           </div>
           {availableMonths.length > 0 && (
-            <div>
-              <label style={{ marginRight: '0.75rem', fontWeight: 500, color: '#92400e', fontSize: '0.875rem' }}>Filter:</label>
+            <div style={{ minWidth: '200px' }}>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 style={{
-                  padding: '0.625rem 1rem',
+                  width: '100%',
+                  padding: '0.75rem 1rem',
                   borderRadius: '12px',
-                  border: '2px solid #fbbf24',
-                  fontSize: '0.9375rem',
-                  minWidth: '180px',
-                  background: 'white'
+                  border: '2px solid #e2e8f0',
+                  fontSize: '0.9375rem'
                 }}
               >
                 <option value="all">All Months</option>
@@ -139,6 +146,22 @@ function PendingPayments() {
               </select>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.5rem', fontWeight: 500 }}>Total Pending Amount</div>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#f59e0b' }} data-testid="total-pending-amount">
+              ₹{filteredTotal.toLocaleString()}
+            </div>
+            {searchTerm && (
+              <div style={{ fontSize: '0.875rem', color: '#92400e', marginTop: '0.5rem' }}>
+                Showing {filteredPayments.length} result(s)
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
