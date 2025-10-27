@@ -255,10 +255,22 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
 
 @api_router.delete("/revenue/{revenue_id}")
 async def delete_revenue(revenue_id: str):
-    result = await db.revenues.delete_one({"id": revenue_id})
-    if result.deleted_count == 0:
+    # Get the revenue entry first to check if it has accounting records
+    existing = await db.revenues.find_one({"id": revenue_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Revenue not found")
-    return {"message": "Revenue deleted successfully"}
+    
+    # Delete from revenues collection
+    result = await db.revenues.delete_one({"id": revenue_id})
+    
+    # Delete all related accounting records
+    await db.ledgers.delete_many({"reference_id": revenue_id})
+    await db.gst_records.delete_many({"reference_id": revenue_id})
+    
+    # Note: Trial balance will auto-recalculate on next request
+    # For real-time update, we could rebuild trial balance here but it's expensive
+    
+    return {"message": "Revenue and related accounting records deleted successfully"}
 
 @api_router.get("/expenses", response_model=List[Expense])
 async def get_expenses():
