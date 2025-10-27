@@ -17,6 +17,7 @@ import GSTSummary from '@/pages/GSTSummary';
 import InvoiceGenerator from '@/pages/InvoiceGenerator';
 import AdminSettings from '@/pages/AdminSettings';
 import UserManagement from '@/pages/UserManagement';
+import DataManagement from '@/pages/DataManagement';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
