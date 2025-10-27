@@ -309,14 +309,35 @@ async def update_expense(expense_id: str, update: ExpenseUpdate):
     updated = await db.expenses.find_one({"id": expense_id}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    # Sync with accounting - delete old entries and create new
+    await db.ledgers.delete_many({"reference_id": expense_id})
+    await db.gst_records.delete_many({"reference_id": expense_id})
+    
+    # Recreate accounting entries with updated data
+    await accounting.create_expense_ledger_entry(updated)
+    
+    # If it's a purchase for resale with GST, recreate GST record
+    if updated.get('purchase_type') == 'Purchase for Resale' and updated.get('gst_rate', 0) > 0:
+        await accounting.create_input_gst_record(updated)
+    
     return Expense(**updated)
 
 @api_router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str):
-    result = await db.expenses.delete_one({"id": expense_id})
-    if result.deleted_count == 0:
+    # Get the expense entry first
+    existing = await db.expenses.find_one({"id": expense_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Expense not found")
-    return {"message": "Expense deleted successfully"}
+    
+    # Delete from expenses collection
+    result = await db.expenses.delete_one({"id": expense_id})
+    
+    # Delete all related accounting records
+    await db.ledgers.delete_many({"reference_id": expense_id})
+    await db.gst_records.delete_many({"reference_id": expense_id})
+    
+    return {"message": "Expense and related accounting records deleted successfully"}
 
 @api_router.get("/dashboard/summary", response_model=DashboardSummary)
 async def get_dashboard_summary():
