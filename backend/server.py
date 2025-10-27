@@ -38,6 +38,10 @@ ALGORITHM = "HS256"
 # Create the main app without a prefix
 app = FastAPI()
 
+# Create upload directory
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
