@@ -365,7 +365,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Difference-based sync logic for Revenue and Expense updates"
+    - "Sale & Cost Tracking with Multi-Vendor Support"
+    - "Auto-Expense Sync functionality"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
