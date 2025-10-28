@@ -720,17 +720,35 @@ function AdminSettings() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  id="show_logo_on_invoice"
-                  name="show_logo_on_invoice"
-                  checked={settings.show_logo_on_invoice}
-                  onChange={handleChange}
-                />
-                <label htmlFor="show_logo_on_invoice" style={{ margin: 0, cursor: 'pointer' }}>
-                  Show company logo on invoices
-                </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="show_logo_on_invoice"
+                    name="show_logo_on_invoice"
+                    checked={settings.show_logo_on_invoice}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor="show_logo_on_invoice" style={{ margin: 0, cursor: 'pointer' }}>
+                    Show company logo on invoices
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="auto_expense_sync"
+                    name="auto_expense_sync"
+                    checked={settings.auto_expense_sync !== false}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor="auto_expense_sync" style={{ margin: 0, cursor: 'pointer' }}>
+                    Auto-create Expense entries from Revenue cost details
+                  </label>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', marginLeft: '1.5rem', marginTop: 0 }}>
+                  💡 When enabled, vendor costs in Revenue will automatically create corresponding Expense records.
+                </p>
               </div>
             </div>
           </div>
