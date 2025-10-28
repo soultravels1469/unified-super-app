@@ -499,46 +499,37 @@ class DifferenceSyncTester:
             return False
     
     def run_all_tests(self):
-        """Run all admin settings tests"""
-        print("🚀 Starting Admin Settings API Tests...")
-        print("=" * 60)
+        """Run all difference-based sync tests"""
+        print("🚀 Starting Difference-Based Sync Logic Tests...")
+        print("=" * 70)
+        print("Testing NEW difference-based sync logic for Revenue and Expense updates")
+        print("Verifying that updates use difference calculations instead of delete-recreate")
+        print("=" * 70)
         
         # Login first
         if not self.login():
             print("❌ Cannot proceed without authentication")
             return False
         
-        print("\n📋 Testing Admin Settings Endpoints...")
+        print("\n📋 Testing Difference-Based Sync Logic...")
         
-        # Test GET settings (default)
-        self.test_get_admin_settings_default()
+        # Test Scenario 1: Expense UPDATE with INCREASE
+        test1_success = self.test_expense_update_increase()
         
-        # Test POST settings
-        self.test_post_admin_settings()
+        # Test Scenario 2: Expense UPDATE with DECREASE  
+        test2_success = self.test_expense_update_decrease()
         
-        # Test file uploads
-        logo_path = self.test_upload_logo()
-        signature_path = self.test_upload_signature()
+        # Test Scenario 3: Revenue UPDATE scenarios
+        test3_success = self.test_revenue_update_scenarios()
         
-        # Test invalid file upload
-        self.test_upload_invalid_file()
-        
-        # Test bank account operations
-        account_id = self.test_add_bank_account()
-        self.test_update_bank_account(account_id)
-        self.test_update_nonexistent_bank_account()
-        
-        # Test GET settings after updates
-        self.test_get_settings_after_updates()
-        
-        # Test delete operations (do this last)
-        self.test_delete_bank_account(account_id)
-        self.test_delete_nonexistent_bank_account()
+        # Verification tests
+        test4_success = self.test_account_balances_accuracy()
+        test5_success = self.test_gst_records_update()
         
         # Summary
-        print("\n" + "=" * 60)
-        print("📊 TEST SUMMARY")
-        print("=" * 60)
+        print("\n" + "=" * 70)
+        print("📊 DIFFERENCE-BASED SYNC TEST SUMMARY")
+        print("=" * 70)
         
         passed = sum(1 for result in self.test_results if result['success'])
         total = len(self.test_results)
@@ -547,6 +538,25 @@ class DifferenceSyncTester:
         print(f"Passed: {passed}")
         print(f"Failed: {total - passed}")
         print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        # Key findings summary
+        print("\n🔍 KEY FINDINGS:")
+        if test1_success and test2_success and test3_success:
+            print("✅ DIFFERENCE-BASED SYNC WORKING: Ledger entry IDs are preserved during updates")
+            print("✅ AMOUNTS ACCURATE: Final amounts reflect exact values (not cumulative)")
+            print("✅ NO DELETE-RECREATE: Updates use difference calculations as intended")
+        else:
+            print("❌ DIFFERENCE-BASED SYNC ISSUES DETECTED")
+        
+        if test4_success:
+            print("✅ ACCOUNT BALANCES: Trial balance is accurate after multiple updates")
+        else:
+            print("❌ ACCOUNT BALANCE ISSUES: Trial balance may be incorrect")
+        
+        if test5_success:
+            print("✅ GST RECORDS: GST calculations updated correctly")
+        else:
+            print("❌ GST RECORD ISSUES: GST updates may be incorrect")
         
         if total - passed > 0:
             print("\n❌ FAILED TESTS:")
