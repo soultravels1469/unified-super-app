@@ -1,72 +1,111 @@
 #!/usr/bin/env python3
 """
-Debug specific issues found in backend testing
+Debug test for Sale & Cost Tracking feature
 """
 
 import requests
 import json
+import uuid
 
+# Configuration
 BACKEND_URL = "https://travelledger-2.preview.emergentagent.com/api"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin123"
 
-def test_post_settings_debug():
-    """Debug the POST settings 500 error"""
-    
-    # Login first
-    login_data = {"username": "admin", "password": "admin123"}
-    login_response = requests.post(f"{BACKEND_URL}/auth/login", json=login_data)
-    
-    if login_response.status_code != 200:
-        print("❌ Login failed")
-        return
-    
-    token = login_response.json().get('token')
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
+def login():
+    """Login and get JWT token"""
+    login_data = {
+        "username": ADMIN_USERNAME,
+        "password": ADMIN_PASSWORD
     }
     
-    # Try minimal settings first
-    minimal_settings = {
-        "company_name": "Test Company"
-    }
+    response = requests.post(f"{BACKEND_URL}/auth/login", json=login_data)
     
-    print("Testing minimal settings...")
-    response = requests.post(f"{BACKEND_URL}/admin/settings", json=minimal_settings, headers=headers)
-    print(f"Status: {response.status_code}")
-    if response.status_code != 200:
-        print(f"Error: {response.text}")
+    if response.status_code == 200:
+        data = response.json()
+        token = data.get('token')
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        print(f"✅ Logged in as {data.get('username')}")
+        return headers
     else:
-        print("✅ Minimal settings worked")
+        print(f"❌ Login failed: {response.status_code}")
+        return None
 
-def test_invalid_file_debug():
-    """Debug the invalid file upload issue"""
-    
-    # Login first
-    login_data = {"username": "admin", "password": "admin123"}
-    login_response = requests.post(f"{BACKEND_URL}/auth/login", json=login_data)
-    
-    if login_response.status_code != 200:
-        print("❌ Login failed")
+def debug_revenue_creation():
+    """Debug revenue creation with cost details"""
+    headers = login()
+    if not headers:
         return
     
-    token = login_response.json().get('token')
-    headers = {'Authorization': f'Bearer {token}'}
+    print("\n🔍 Testing Revenue Creation with Cost Details...")
     
-    # Create a text file
-    test_file_path = "/tmp/test_invalid.txt"
-    with open(test_file_path, 'w') as f:
-        f.write("This is not an image file")
+    # Create revenue with cost details
+    revenue_data = {
+        "date": "2025-01-28",
+        "client_name": "Debug Test Client",
+        "source": "Package",
+        "payment_mode": "Bank Transfer",
+        "pending_amount": 0.0,
+        "received_amount": 50000.0,
+        "status": "Received",
+        "sale_price": 50000.0,
+        "cost_price_details": [
+            {
+                "id": str(uuid.uuid4()),
+                "vendor_name": "Debug Hotel",
+                "category": "Hotel",
+                "amount": 20000,
+                "payment_date": "2025-01-28",
+                "notes": "Debug test hotel"
+            }
+        ]
+    }
     
-    # Try to upload as logo
-    with open(test_file_path, 'rb') as f:
-        files = {'file': ('test_invalid.txt', f, 'text/plain')}
+    print(f"📤 Sending revenue data: {json.dumps(revenue_data, indent=2)}")
+    
+    response = requests.post(f"{BACKEND_URL}/revenue", json=revenue_data, headers=headers)
+    
+    print(f"📥 Response status: {response.status_code}")
+    
+    if response.status_code == 200:
+        revenue_response = response.json()
+        print(f"📥 Revenue response: {json.dumps(revenue_response, indent=2)}")
         
-        response = requests.post(f"{BACKEND_URL}/admin/upload-logo", files=files, headers=headers)
-        print(f"Invalid file upload status: {response.status_code}")
-        print(f"Response: {response.text}")
+        revenue_id = revenue_response.get('id')
+        
+        # Check expenses
+        print("\n🔍 Checking created expenses...")
+        expenses_response = requests.get(f"{BACKEND_URL}/expenses", headers=headers)
+        
+        if expenses_response.status_code == 200:
+            expenses = expenses_response.json()
+            linked_expenses = [exp for exp in expenses if exp.get('linked_revenue_id') == revenue_id]
+            
+            print(f"📊 Found {len(linked_expenses)} linked expenses")
+            for exp in linked_expenses:
+                print(f"   - Expense ID: {exp.get('id')}")
+                print(f"   - Amount: ₹{exp.get('amount')}")
+                print(f"   - Description: {exp.get('description')}")
+        
+        # Check admin settings
+        print("\n🔍 Checking admin settings...")
+        settings_response = requests.get(f"{BACKEND_URL}/admin/settings", headers=headers)
+        
+        if settings_response.status_code == 200:
+            settings = settings_response.json()
+            auto_sync = settings.get('auto_expense_sync', True)
+            print(f"📊 Auto-expense sync enabled: {auto_sync}")
+        
+        # Clean up
+        print(f"\n🧹 Cleaning up test revenue...")
+        delete_response = requests.delete(f"{BACKEND_URL}/revenue/{revenue_id}", headers=headers)
+        print(f"🗑️ Delete response: {delete_response.status_code}")
+        
+    else:
+        print(f"❌ Revenue creation failed: {response.text}")
 
 if __name__ == "__main__":
-    print("🔍 Debugging backend issues...")
-    test_post_settings_debug()
-    print("\n" + "="*50)
-    test_invalid_file_debug()
+    debug_revenue_creation()
