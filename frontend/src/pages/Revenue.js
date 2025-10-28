@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API } from '@/App';
 import { toast } from 'sonner';
-import RevenueForm from '@/components/RevenueForm';
+import RevenueFormEnhanced from '../components/RevenueFormEnhanced';
 import { Pencil, Trash2 } from 'lucide-react';
 import { groupByMonth } from '@/utils/helpers';
 
