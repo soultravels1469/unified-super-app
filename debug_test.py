@@ -86,14 +86,22 @@ def debug_revenue_creation():
         
         if expenses_response.status_code == 200:
             expenses = expenses_response.json()
-            linked_expenses = [exp for exp in expenses if exp.get('linked_revenue_id') == revenue_id]
+            print(f"📊 Total expenses in system: {len(expenses)}")
             
-            print(f"📊 Found {len(linked_expenses)} linked expenses")
-            for exp in linked_expenses:
+            # Check for any expenses with our revenue ID
+            linked_expenses = [exp for exp in expenses if exp.get('linked_revenue_id') == revenue_id]
+            print(f"📊 Found {len(linked_expenses)} linked expenses for revenue {revenue_id}")
+            
+            # Check for any expenses created recently
+            recent_expenses = [exp for exp in expenses if 'Debug Test Client' in exp.get('description', '')]
+            print(f"📊 Found {len(recent_expenses)} expenses mentioning 'Debug Test Client'")
+            
+            for exp in recent_expenses:
                 print(f"   - Expense ID: {exp.get('id')}")
                 print(f"   - Amount: ₹{exp.get('amount')}")
                 print(f"   - Description: {exp.get('description')}")
                 print(f"   - Linked Revenue ID: {exp.get('linked_revenue_id')}")
+                print(f"   - Created At: {exp.get('created_at')}")
         
         # Check admin settings
         print("\n🔍 Checking admin settings...")
