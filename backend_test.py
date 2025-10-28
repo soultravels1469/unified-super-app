@@ -79,39 +79,112 @@ class DifferenceSyncTester:
             print(f"Error creating test image: {e}")
             return None
     
-    def test_get_admin_settings_default(self):
-        """Test GET /api/admin/settings - Default values when no settings exist"""
+    def get_ledger_entries(self):
+        """Get all ledger entries"""
         try:
-            response = requests.get(f"{self.base_url}/admin/settings", headers=self.headers)
+            response = requests.get(f"{self.base_url}/accounting/ledger", headers=self.headers)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('entries', [])
+            else:
+                self.log_result("Get Ledger Entries", False, f"Failed with status {response.status_code}", response.text)
+                return []
+        except Exception as e:
+            self.log_result("Get Ledger Entries", False, f"Error: {str(e)}")
+            return []
+    
+    def create_expense(self, amount, category="Office Supplies", payment_mode="Cash"):
+        """Create a test expense"""
+        try:
+            expense_data = {
+                "date": "2025-01-15",
+                "category": category,
+                "payment_mode": payment_mode,
+                "amount": amount,
+                "description": f"Test expense for difference sync - {amount}",
+                "purchase_type": "General Expense"
+            }
+            
+            response = requests.post(f"{self.base_url}/expenses", json=expense_data, headers=self.headers)
             
             if response.status_code == 200:
                 data = response.json()
-                
-                # Check required default fields
-                required_fields = [
-                    'company_name', 'company_address', 'company_contact', 'company_email',
-                    'bank_accounts', 'invoice_prefix', 'default_tax_percentage',
-                    'invoice_footer', 'show_logo_on_invoice'
-                ]
-                
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if not missing_fields:
-                    self.log_result("GET Admin Settings (Default)", True, 
-                                  f"Retrieved default settings with all required fields")
-                    return data
-                else:
-                    self.log_result("GET Admin Settings (Default)", False, 
-                                  f"Missing required fields: {missing_fields}", data)
-                    return None
+                expense_id = data.get('id')
+                self.log_result("Create Expense", True, f"Created expense with ID: {expense_id}, Amount: ₹{amount}")
+                return expense_id
             else:
-                self.log_result("GET Admin Settings (Default)", False, 
-                              f"Failed with status {response.status_code}", response.text)
+                self.log_result("Create Expense", False, f"Failed with status {response.status_code}", response.text)
                 return None
                 
         except Exception as e:
-            self.log_result("GET Admin Settings (Default)", False, f"Error: {str(e)}")
+            self.log_result("Create Expense", False, f"Error: {str(e)}")
             return None
+    
+    def create_revenue(self, received_amount, status="Received", source="Visa"):
+        """Create a test revenue"""
+        try:
+            revenue_data = {
+                "date": "2025-01-15",
+                "client_name": "Test Client Ltd",
+                "source": source,
+                "payment_mode": "Bank",
+                "pending_amount": 0.0,
+                "received_amount": received_amount,
+                "status": status,
+                "supplier": "",
+                "notes": f"Test revenue for difference sync - {received_amount}"
+            }
+            
+            response = requests.post(f"{self.base_url}/revenue", json=revenue_data, headers=self.headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                revenue_id = data.get('id')
+                self.log_result("Create Revenue", True, f"Created revenue with ID: {revenue_id}, Amount: ₹{received_amount}")
+                return revenue_id
+            else:
+                self.log_result("Create Revenue", False, f"Failed with status {response.status_code}", response.text)
+                return None
+                
+        except Exception as e:
+            self.log_result("Create Revenue", False, f"Error: {str(e)}")
+            return None
+    
+    def update_expense(self, expense_id, new_amount):
+        """Update expense amount"""
+        try:
+            update_data = {"amount": new_amount}
+            
+            response = requests.put(f"{self.base_url}/expenses/{expense_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code == 200:
+                self.log_result("Update Expense", True, f"Updated expense {expense_id} to ₹{new_amount}")
+                return True
+            else:
+                self.log_result("Update Expense", False, f"Failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Expense", False, f"Error: {str(e)}")
+            return False
+    
+    def update_revenue(self, revenue_id, new_received_amount):
+        """Update revenue received amount"""
+        try:
+            update_data = {"received_amount": new_received_amount}
+            
+            response = requests.put(f"{self.base_url}/revenue/{revenue_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code == 200:
+                self.log_result("Update Revenue", True, f"Updated revenue {revenue_id} to ₹{new_received_amount}")
+                return True
+            else:
+                self.log_result("Update Revenue", False, f"Failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Revenue", False, f"Error: {str(e)}")
+            return False
     
     def test_post_admin_settings(self):
         """Test POST /api/admin/settings - Save complete settings"""
