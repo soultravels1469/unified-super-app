@@ -242,14 +242,11 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
     new_status = updated.get('status', 'Pending')
     
     if (new_status == 'Received' and old_status != 'Received' and new_received > 0):
-        # Create new accounting entry
+        # Create new accounting entry (first time marking as received)
         await accounting.create_revenue_ledger_entry(updated)
     elif (new_status == 'Received' and old_status == 'Received' and new_received != old_received):
-        # Update existing accounting entry by removing old and creating new
-        await db.ledgers.delete_many({"reference_id": revenue_id})
-        await db.gst_records.delete_many({"reference_id": revenue_id})
-        if new_received > 0:
-            await accounting.create_revenue_ledger_entry(updated)
+        # Update existing accounting entry using difference-based approach
+        await accounting.update_revenue_ledger_entry(revenue_id, old_received, new_received, updated)
     
     return Revenue(**updated)
 
