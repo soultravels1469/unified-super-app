@@ -459,166 +459,43 @@ class DifferenceSyncTester:
             self.log_result("Account Balance Check", False, f"Error: {str(e)}")
             return False
     
-    def test_add_bank_account(self):
-        """Test POST /api/admin/settings/bank-accounts - Add bank account"""
+    def test_gst_records_update(self):
+        """Verify GST records are updated correctly with difference-based sync"""
         try:
-            bank_account = {
-                "account_holder_name": "Soul Immigration & Travels",
-                "bank_name": "State Bank of India",
-                "account_number": "1234567890123456",
-                "ifsc_code": "SBIN0001234",
-                "branch": "Main Branch",
-                "upi_id": "soulimmigration@sbi",
-                "is_default": True
-            }
+            print("\n🔍 VERIFICATION: GST Records Update")
             
-            response = requests.post(f"{self.base_url}/admin/settings/bank-accounts", 
-                                   json=bank_account, headers=self.headers)
+            # Get GST summary to check if GST records are properly updated
+            response = requests.get(f"{self.base_url}/accounting/gst-summary", headers=self.headers)
             
             if response.status_code == 200:
                 data = response.json()
-                account_data = data.get('account', {})
                 
-                if account_data.get('id') and account_data.get('account_number') == bank_account['account_number']:
-                    self.log_result("Add Bank Account", True, f"Bank account added with ID: {account_data.get('id')}")
-                    return account_data.get('id')
-                else:
-                    self.log_result("Add Bank Account", False, "Invalid account data returned", data)
-                    return None
-            else:
-                self.log_result("Add Bank Account", False, 
-                              f"Failed with status {response.status_code}", response.text)
-                return None
+                output_gst = data.get('output_gst', {})
+                total_output = output_gst.get('total', 0)
                 
-        except Exception as e:
-            self.log_result("Add Bank Account", False, f"Error: {str(e)}")
-            return None
-    
-    def test_update_bank_account(self, account_id):
-        """Test PUT /api/admin/settings/bank-accounts/{account_id} - Update bank account"""
-        if not account_id:
-            self.log_result("Update Bank Account", False, "No account ID provided")
-            return False
-            
-        try:
-            update_data = {
-                "account_holder_name": "Soul Immigration & Travels Ltd",
-                "branch": "Updated Branch Name",
-                "upi_id": "updated@sbi",
-                "is_default": False
-            }
-            
-            response = requests.put(f"{self.base_url}/admin/settings/bank-accounts/{account_id}", 
-                                  json=update_data, headers=self.headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('message') == 'Bank account updated successfully':
-                    self.log_result("Update Bank Account", True, f"Bank account {account_id} updated successfully")
-                    return True
+                if total_output > 0:
+                    self.log_result("GST Records Check", True, f"GST records found - Total Output GST: ₹{total_output}")
+                    
+                    # Check individual GST components
+                    cgst = output_gst.get('cgst', 0)
+                    sgst = output_gst.get('sgst', 0)
+                    
+                    if cgst > 0 and sgst > 0:
+                        self.log_result("GST Components Check", True, f"CGST: ₹{cgst}, SGST: ₹{sgst}")
+                    else:
+                        self.log_result("GST Components Check", False, f"Missing GST components - CGST: ₹{cgst}, SGST: ₹{sgst}")
+                        return False
                 else:
-                    self.log_result("Update Bank Account", False, "Unexpected response", data)
+                    self.log_result("GST Records Check", False, "No GST records found")
                     return False
-            else:
-                self.log_result("Update Bank Account", False, 
-                              f"Failed with status {response.status_code}", response.text)
-                return False
                 
-        except Exception as e:
-            self.log_result("Update Bank Account", False, f"Error: {str(e)}")
-            return False
-    
-    def test_update_nonexistent_bank_account(self):
-        """Test updating non-existent bank account - should return 404"""
-        try:
-            fake_id = str(uuid.uuid4())
-            update_data = {"branch": "Should not work"}
-            
-            response = requests.put(f"{self.base_url}/admin/settings/bank-accounts/{fake_id}", 
-                                  json=update_data, headers=self.headers)
-            
-            if response.status_code == 404:
-                self.log_result("Update Non-existent Bank Account", True, "Correctly returned 404 for non-existent account")
                 return True
             else:
-                self.log_result("Update Non-existent Bank Account", False, 
-                              f"Should have returned 404, got {response.status_code}")
+                self.log_result("GST Records Check", False, f"Failed to get GST summary: {response.status_code}")
                 return False
                 
         except Exception as e:
-            self.log_result("Update Non-existent Bank Account", False, f"Error: {str(e)}")
-            return False
-    
-    def test_delete_bank_account(self, account_id):
-        """Test DELETE /api/admin/settings/bank-accounts/{account_id} - Delete bank account"""
-        if not account_id:
-            self.log_result("Delete Bank Account", False, "No account ID provided")
-            return False
-            
-        try:
-            response = requests.delete(f"{self.base_url}/admin/settings/bank-accounts/{account_id}", 
-                                     headers=self.headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('message') == 'Bank account deleted successfully':
-                    self.log_result("Delete Bank Account", True, f"Bank account {account_id} deleted successfully")
-                    return True
-                else:
-                    self.log_result("Delete Bank Account", False, "Unexpected response", data)
-                    return False
-            else:
-                self.log_result("Delete Bank Account", False, 
-                              f"Failed with status {response.status_code}", response.text)
-                return False
-                
-        except Exception as e:
-            self.log_result("Delete Bank Account", False, f"Error: {str(e)}")
-            return False
-    
-    def test_delete_nonexistent_bank_account(self):
-        """Test deleting non-existent bank account - should return 404"""
-        try:
-            fake_id = str(uuid.uuid4())
-            
-            response = requests.delete(f"{self.base_url}/admin/settings/bank-accounts/{fake_id}", 
-                                     headers=self.headers)
-            
-            if response.status_code == 404:
-                self.log_result("Delete Non-existent Bank Account", True, "Correctly returned 404 for non-existent account")
-                return True
-            else:
-                self.log_result("Delete Non-existent Bank Account", False, 
-                              f"Should have returned 404, got {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_result("Delete Non-existent Bank Account", False, f"Error: {str(e)}")
-            return False
-    
-    def test_get_settings_after_updates(self):
-        """Test GET /api/admin/settings after making updates"""
-        try:
-            response = requests.get(f"{self.base_url}/admin/settings", headers=self.headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check if our updates are reflected
-                if (data.get('company_name') == 'Soul Immigration & Travels Ltd' and 
-                    data.get('company_address') == '123 Business Street, City, State 12345'):
-                    self.log_result("GET Settings After Updates", True, "Settings correctly reflect updates")
-                    return True
-                else:
-                    self.log_result("GET Settings After Updates", False, "Settings do not reflect updates", data)
-                    return False
-            else:
-                self.log_result("GET Settings After Updates", False, 
-                              f"Failed with status {response.status_code}", response.text)
-                return False
-                
-        except Exception as e:
-            self.log_result("GET Settings After Updates", False, f"Error: {str(e)}")
+            self.log_result("GST Records Check", False, f"Error: {str(e)}")
             return False
     
     def run_all_tests(self):
