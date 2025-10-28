@@ -405,8 +405,23 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
     
     old_received = existing.get('received_amount', 0)
     old_status = existing.get('status', 'Pending')
+    old_cost_details = existing.get('cost_price_details', [])
     
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    # Recalculate if sale_price or cost_price_details changed
+    if 'sale_price' in update_data or 'cost_price_details' in update_data:
+        sale_price = update_data.get('sale_price', existing.get('sale_price', 0))
+        cost_details = update_data.get('cost_price_details', existing.get('cost_price_details', []))
+        
+        calculations = calculate_cost_profit(sale_price, cost_details)
+        update_data.update(calculations)
+        
+        # Update linked expenses
+        if 'cost_price_details' in update_data:
+            new_cost_details = update_data['cost_price_details']
+            await update_linked_expenses(revenue_id, old_cost_details, new_cost_details)
+    
     if update_data:
         await db.revenues.update_one({"id": revenue_id}, {"$set": update_data})
     
