@@ -114,6 +114,8 @@ class RevenueUpdate(BaseModel):
     status: Optional[str] = None
     supplier: Optional[str] = None
     notes: Optional[str] = None
+    sale_price: Optional[float] = None
+    cost_price_details: Optional[List[Dict]] = None
 
 class Expense(BaseModel):
     model_config = ConfigDict(extra="ignore")
