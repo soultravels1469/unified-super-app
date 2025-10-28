@@ -262,52 +262,71 @@ class DifferenceSyncTester:
             self.log_result("Expense Update Increase Test", False, f"Error: {str(e)}")
             return False
     
-    def test_upload_logo(self):
-        """Test POST /api/admin/upload-logo - Upload logo file"""
+    def test_expense_update_decrease(self):
+        """Test Scenario 2: Expense UPDATE with DECREASE - Verify ledger entry IDs remain same"""
         try:
-            # Create test image
-            test_image_path = self.create_test_image("test_logo.png")
-            if not test_image_path:
-                self.log_result("Upload Logo", False, "Failed to create test image")
-                return None
+            print("\n🔍 SCENARIO 2: Expense UPDATE with DECREASE")
             
-            # Upload file
-            with open(test_image_path, 'rb') as f:
-                files = {'file': ('test_logo.png', f, 'image/png')}
-                headers_no_content_type = {k: v for k, v in self.headers.items() if k != 'Content-Type'}
+            # Step 1: Update the same expense from ₹15,000 to ₹8,000 (-₹7,000 decrease)
+            # First, get the expense ID from previous test by creating a new one
+            expense_id = self.create_expense(15000.0, "Travel", "Bank")
+            if not expense_id:
+                return False
+            
+            # Get initial ledger entries
+            time.sleep(1)
+            initial_entries = self.get_ledger_entries()
+            expense_entries = [e for e in initial_entries if e.get('reference_id') == expense_id]
+            
+            if len(expense_entries) != 2:
+                self.log_result("Expense Decrease Initial Check", False, f"Expected 2 entries, got {len(expense_entries)}")
+                return False
+            
+            # Store initial entry IDs
+            initial_entry_ids = {e['id']: {'debit': e['debit'], 'credit': e['credit'], 'account': e['account']} for e in expense_entries}
+            
+            # Step 2: Update to ₹8,000
+            if not self.update_expense(expense_id, 8000.0):
+                return False
+            
+            # Step 3: Verify ledger entries are updated with the decreased amount
+            time.sleep(1)
+            updated_entries = self.get_ledger_entries()
+            updated_expense_entries = [e for e in updated_entries if e.get('reference_id') == expense_id]
+            
+            # Step 4: Verify the ledger entry IDs remain the same (proving no delete-recreate)
+            success = True
+            for entry in updated_expense_entries:
+                entry_id = entry['id']
+                if entry_id not in initial_entry_ids:
+                    self.log_result("Expense Decrease ID Preservation", False, f"Entry ID {entry_id} not found - entries were recreated!")
+                    success = False
+                    continue
                 
-                response = requests.post(f"{self.base_url}/admin/upload-logo", 
-                                       files=files, headers=headers_no_content_type)
-            
-            # Clean up test file
-            os.unlink(test_image_path)
-            
-            if response.status_code == 200:
-                data = response.json()
-                logo_path = data.get('logo_path')
-                
-                if logo_path and logo_path.startswith('/uploads/logo_'):
-                    # Verify file exists on server
-                    file_url = f"https://travelledger-2.preview.emergentagent.com{logo_path}"
-                    file_check = requests.get(file_url)
-                    
-                    if file_check.status_code == 200:
-                        self.log_result("Upload Logo", True, f"Logo uploaded and accessible at {logo_path}")
-                        return logo_path
+                account = entry['account']
+                if account == "Travel":
+                    if abs(entry['debit'] - 8000.0) < 0.01:
+                        self.log_result("Travel Decrease Update", True, f"Correctly decreased from ₹15000 to ₹{entry['debit']}")
                     else:
-                        self.log_result("Upload Logo", False, f"Logo uploaded but not accessible at {logo_path}")
-                        return None
-                else:
-                    self.log_result("Upload Logo", False, "Invalid logo path returned", data)
-                    return None
+                        self.log_result("Travel Decrease Update", False, f"Expected ₹8000, got ₹{entry['debit']}")
+                        success = False
+                elif account == "Bank - Current Account":
+                    if abs(entry['credit'] - 8000.0) < 0.01:
+                        self.log_result("Bank Decrease Update", True, f"Correctly decreased from ₹15000 to ₹{entry['credit']}")
+                    else:
+                        self.log_result("Bank Decrease Update", False, f"Expected ₹8000, got ₹{entry['credit']}")
+                        success = False
+            
+            if success:
+                self.log_result("Expense Update Decrease Test", True, "✅ Entry IDs preserved, amounts decreased correctly")
             else:
-                self.log_result("Upload Logo", False, 
-                              f"Upload failed with status {response.status_code}", response.text)
-                return None
+                self.log_result("Expense Update Decrease Test", False, "❌ Decrease update failed")
+            
+            return success
                 
         except Exception as e:
-            self.log_result("Upload Logo", False, f"Error: {str(e)}")
-            return None
+            self.log_result("Expense Update Decrease Test", False, f"Error: {str(e)}")
+            return False
     
     def test_upload_signature(self):
         """Test POST /api/admin/upload-signature - Upload signature file"""
