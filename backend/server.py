@@ -156,6 +156,8 @@ class ExpenseUpdate(BaseModel):
     supplier_gstin: Optional[str] = None
     invoice_number: Optional[str] = None
     gst_rate: Optional[float] = None
+    linked_revenue_id: Optional[str] = None
+    linked_cost_detail_id: Optional[str] = None
 
 class DashboardSummary(BaseModel):
     total_revenue: float
