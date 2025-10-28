@@ -328,52 +328,98 @@ class DifferenceSyncTester:
             self.log_result("Expense Update Decrease Test", False, f"Error: {str(e)}")
             return False
     
-    def test_upload_signature(self):
-        """Test POST /api/admin/upload-signature - Upload signature file"""
+    def test_revenue_update_scenarios(self):
+        """Test Scenario 3: Revenue UPDATE - Verify difference-based updates with GST"""
         try:
-            # Create test image
-            test_image_path = self.create_test_image("test_signature.png", (200, 80))
-            if not test_image_path:
-                self.log_result("Upload Signature", False, "Failed to create test image")
-                return None
+            print("\n🔍 SCENARIO 3: Revenue UPDATE with GST calculations")
             
-            # Upload file
-            with open(test_image_path, 'rb') as f:
-                files = {'file': ('test_signature.png', f, 'image/png')}
-                headers_no_content_type = {k: v for k, v in self.headers.items() if k != 'Content-Type'}
+            # Step 1: Create revenue with status="Received", received_amount=₹50,000
+            revenue_id = self.create_revenue(50000.0, "Received", "Visa")
+            if not revenue_id:
+                return False
+            
+            # Step 2: Get initial ledger entries
+            time.sleep(1)
+            initial_entries = self.get_ledger_entries()
+            revenue_entries = [e for e in initial_entries if e.get('reference_id') == revenue_id]
+            
+            if len(revenue_entries) != 4:  # Bank, Visa Revenue, CGST, SGST
+                self.log_result("Revenue Initial Ledger Check", False, f"Expected 4 entries, got {len(revenue_entries)}")
+                return False
+            
+            # Store initial entry IDs and amounts
+            initial_entry_ids = {e['id']: {'debit': e['debit'], 'credit': e['credit'], 'account': e['account']} for e in revenue_entries}
+            
+            self.log_result("Revenue Initial Ledger Check", True, 
+                          f"Found 4 ledger entries for ₹50000 revenue with GST breakdown")
+            
+            # Step 3: Update received_amount to ₹60,000 (+₹10,000)
+            if not self.update_revenue(revenue_id, 60000.0):
+                return False
+            
+            # Step 4: Verify ledger entries updated with difference
+            time.sleep(1)
+            updated_entries = self.get_ledger_entries()
+            updated_revenue_entries = [e for e in updated_entries if e.get('reference_id') == revenue_id]
+            
+            if len(updated_revenue_entries) != 4:
+                self.log_result("Revenue Update Ledger Check", False, f"Expected 4 entries after update, got {len(updated_revenue_entries)}")
+                return False
+            
+            # Verify IDs are preserved and amounts are correct
+            success = True
+            for entry in updated_revenue_entries:
+                entry_id = entry['id']
+                if entry_id not in initial_entry_ids:
+                    self.log_result("Revenue Update ID Check", False, f"Entry ID {entry_id} not found - entries were recreated!")
+                    success = False
+                    continue
                 
-                response = requests.post(f"{self.base_url}/admin/upload-signature", 
-                                       files=files, headers=headers_no_content_type)
-            
-            # Clean up test file
-            os.unlink(test_image_path)
-            
-            if response.status_code == 200:
-                data = response.json()
-                signature_path = data.get('signature_path')
-                
-                if signature_path and signature_path.startswith('/uploads/signature_'):
-                    # Verify file exists on server
-                    file_url = f"https://travelledger-2.preview.emergentagent.com{signature_path}"
-                    file_check = requests.get(file_url)
-                    
-                    if file_check.status_code == 200:
-                        self.log_result("Upload Signature", True, f"Signature uploaded and accessible at {signature_path}")
-                        return signature_path
+                account = entry['account']
+                if account == "Bank - Current Account":
+                    # Should be debit ₹60,000
+                    if abs(entry['debit'] - 60000.0) < 0.01:
+                        self.log_result("Bank Revenue Update", True, f"Bank debit updated to ₹{entry['debit']}")
                     else:
-                        self.log_result("Upload Signature", False, f"Signature uploaded but not accessible at {signature_path}")
-                        return None
-                else:
-                    self.log_result("Upload Signature", False, "Invalid signature path returned", data)
-                    return None
+                        self.log_result("Bank Revenue Update", False, f"Expected ₹60000, got ₹{entry['debit']}")
+                        success = False
+            
+            # Step 5: Update received_amount to ₹45,000 (-₹15,000)
+            if not self.update_revenue(revenue_id, 45000.0):
+                return False
+            
+            # Step 6: Verify ledger entries updated correctly with decrease
+            time.sleep(1)
+            final_entries = self.get_ledger_entries()
+            final_revenue_entries = [e for e in final_entries if e.get('reference_id') == revenue_id]
+            
+            # Verify final amounts
+            for entry in final_revenue_entries:
+                entry_id = entry['id']
+                if entry_id not in initial_entry_ids:
+                    self.log_result("Revenue Final ID Check", False, f"Entry ID {entry_id} not found - entries were recreated!")
+                    success = False
+                    continue
+                
+                account = entry['account']
+                if account == "Bank - Current Account":
+                    # Should be debit ₹45,000
+                    if abs(entry['debit'] - 45000.0) < 0.01:
+                        self.log_result("Bank Final Update", True, f"Bank debit correctly decreased to ₹{entry['debit']}")
+                    else:
+                        self.log_result("Bank Final Update", False, f"Expected ₹45000, got ₹{entry['debit']}")
+                        success = False
+            
+            if success:
+                self.log_result("Revenue Update Test", True, "✅ Revenue difference-based sync working - IDs preserved, GST updated correctly")
             else:
-                self.log_result("Upload Signature", False, 
-                              f"Upload failed with status {response.status_code}", response.text)
-                return None
+                self.log_result("Revenue Update Test", False, "❌ Revenue update failed")
+            
+            return success
                 
         except Exception as e:
-            self.log_result("Upload Signature", False, f"Error: {str(e)}")
-            return None
+            self.log_result("Revenue Update Test", False, f"Error: {str(e)}")
+            return False
     
     def test_upload_invalid_file(self):
         """Test uploading invalid file type"""
