@@ -20,7 +20,8 @@ function AdminSettings() {
     invoice_footer: 'Thank you for your business!',
     invoice_terms: '',
     signature_path: '',
-    show_logo_on_invoice: true
+    show_logo_on_invoice: true,
+    auto_expense_sync: true
   });
   
   const [loading, setLoading] = useState(true);
