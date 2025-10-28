@@ -382,13 +382,13 @@ async def create_revenue(revenue: RevenueCreate):
     
     # Create linked expenses from cost details
     if cost_price_details:
-        await create_linked_expenses(revenue_obj.id, doc)
-        # Re-fetch to get updated linked_expense_ids
-        updated_doc = await db.revenues.find_one({'id': revenue_obj.id}, {'_id': 0})
-        if updated_doc:
+        linked_expense_ids = await create_linked_expenses(revenue_obj.id, doc)
+        # Update the revenue document with linked_expense_ids in cost_price_details
+        if linked_expense_ids:
+            updated_cost_details = doc.get('cost_price_details', [])
             await db.revenues.update_one(
                 {'id': revenue_obj.id},
-                {'$set': {'cost_price_details': updated_doc.get('cost_price_details', [])}}
+                {'$set': {'cost_price_details': updated_cost_details}}
             )
     
     # Create accounting ledger entry if revenue is received
