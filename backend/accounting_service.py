@@ -237,6 +237,121 @@ class AccountingService:
             {'$set': {'balance': new_balance}}
         )
     
+    async def update_revenue_ledger_entry(self, revenue_id: str, old_amount: float, new_amount: float, revenue_data: dict):
+        """Update existing revenue ledger entries with difference-based approach"""
+        
+        # Calculate difference
+        amount_diff = new_amount - old_amount
+        
+        if amount_diff == 0:
+            return  # No change needed
+        
+        # Update ledger entries by applying the difference
+        ledger_entries = await self.db.ledgers.find({'reference_id': revenue_id}).to_list(100)
+        
+        for entry in ledger_entries:
+            old_debit = entry.get('debit', 0.0)
+            old_credit = entry.get('credit', 0.0)
+            
+            # Calculate proportional change
+            if old_debit > 0:
+                new_debit = old_debit + (amount_diff * old_debit / old_amount)
+                await self.db.ledgers.update_one(
+                    {'id': entry['id']},
+                    {'$set': {'debit': new_debit}}
+                )
+                # Update account balance with difference
+                account_name = entry['account']
+                await self.update_account_balance(account_name, amount_diff * old_debit / old_amount, 'debit')
+            
+            if old_credit > 0:
+                new_credit = old_credit + (amount_diff * old_credit / old_amount)
+                await self.db.ledgers.update_one(
+                    {'id': entry['id']},
+                    {'$set': {'credit': new_credit}}
+                )
+                # Update account balance with difference
+                account_name = entry['account']
+                await self.update_account_balance(account_name, amount_diff * old_credit / old_amount, 'credit')
+        
+        # Update GST records if they exist
+        gst_records = await self.db.gst_records.find({'reference_id': revenue_id}).to_list(100)
+        if gst_records:
+            # Recalculate GST with new amount
+            source = revenue_data.get('source', 'Other')
+            gst_breakdown = self.calculate_gst(new_amount, source)
+            
+            for gst_record in gst_records:
+                await self.db.gst_records.update_one(
+                    {'id': gst_record['id']},
+                    {'$set': {
+                        'taxable_amount': gst_breakdown['taxable_amount'],
+                        'cgst': gst_breakdown['cgst'],
+                        'sgst': gst_breakdown['sgst'],
+                        'total_gst': gst_breakdown['total_gst'],
+                        'total_amount': new_amount
+                    }}
+                )
+    
+    async def update_expense_ledger_entry(self, expense_id: str, old_amount: float, new_amount: float, expense_data: dict):
+        """Update existing expense ledger entries with difference-based approach"""
+        
+        # Calculate difference
+        amount_diff = new_amount - old_amount
+        
+        if amount_diff == 0:
+            return  # No change needed
+        
+        # Update ledger entries by applying the difference
+        ledger_entries = await self.db.ledgers.find({'reference_id': expense_id}).to_list(100)
+        
+        for entry in ledger_entries:
+            old_debit = entry.get('debit', 0.0)
+            old_credit = entry.get('credit', 0.0)
+            
+            # Update amounts proportionally
+            if old_debit > 0:
+                new_debit = old_debit + amount_diff
+                await self.db.ledgers.update_one(
+                    {'id': entry['id']},
+                    {'$set': {'debit': new_debit}}
+                )
+                # Update account balance with difference
+                account_name = entry['account']
+                await self.update_account_balance(account_name, amount_diff, 'debit')
+            
+            if old_credit > 0:
+                new_credit = old_credit + amount_diff
+                await self.db.ledgers.update_one(
+                    {'id': entry['id']},
+                    {'$set': {'credit': new_credit}}
+                )
+                # Update account balance with difference
+                account_name = entry['account']
+                await self.update_account_balance(account_name, amount_diff, 'credit')
+        
+        # Update GST records for Purchase for Resale
+        if expense_data.get('purchase_type') == 'Purchase for Resale' and expense_data.get('gst_rate', 0) > 0:
+            gst_records = await self.db.gst_records.find({'reference_id': expense_id}).to_list(100)
+            
+            # Recalculate GST amounts
+            gst_rate = expense_data.get('gst_rate', 18) / 100
+            taxable_amount = new_amount / (1 + gst_rate)
+            cgst = (taxable_amount * gst_rate) / 2
+            sgst = (taxable_amount * gst_rate) / 2
+            
+            for gst_record in gst_records:
+                await self.db.gst_records.update_one(
+                    {'id': gst_record['id']},
+                    {'$set': {
+                        'taxable_amount': taxable_amount,
+                        'cgst': cgst,
+                        'sgst': sgst,
+                        'total_gst': cgst + sgst,
+                        'total_amount': new_amount
+                    }}
+                )
+    
     async def get_trial_balance(self):
         """Generate trial balance"""
         accounts = await self.db.accounts.find({}, {'_id': 0}).to_list(1000)
