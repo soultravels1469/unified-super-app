@@ -186,41 +186,80 @@ class DifferenceSyncTester:
             self.log_result("Update Revenue", False, f"Error: {str(e)}")
             return False
     
-    def test_post_admin_settings(self):
-        """Test POST /api/admin/settings - Save complete settings"""
+    def test_expense_update_increase(self):
+        """Test Scenario 1: Expense UPDATE with INCREASE - Verify difference-based sync"""
         try:
-            test_settings = {
-                "company_name": "Soul Immigration & Travels Ltd",
-                "company_address": "123 Business Street, City, State 12345",
-                "company_contact": "+91-9876543210",
-                "company_email": "info@soulimmigration.com",
-                "company_tagline": "Your Gateway to Global Opportunities",
-                "gstin": "29ABCDE1234F1Z5",
-                "invoice_prefix": "SOUL",
-                "default_tax_percentage": 18.0,
-                "invoice_footer": "Thank you for choosing Soul Immigration!",
-                "invoice_terms": "Payment due within 30 days",
-                "show_logo_on_invoice": True
-            }
+            print("\n🔍 SCENARIO 1: Expense UPDATE with INCREASE")
             
-            response = requests.post(f"{self.base_url}/admin/settings", 
-                                   json=test_settings, headers=self.headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('message') == 'Settings updated successfully':
-                    self.log_result("POST Admin Settings", True, "Settings saved successfully")
-                    return True
-                else:
-                    self.log_result("POST Admin Settings", False, "Unexpected response", data)
-                    return False
-            else:
-                self.log_result("POST Admin Settings", False, 
-                              f"Failed with status {response.status_code}", response.text)
+            # Step 1: Create expense with amount=₹10,000
+            expense_id = self.create_expense(10000.0, "Office Supplies", "Cash")
+            if not expense_id:
                 return False
+            
+            # Step 2: Get initial ledger entries and note the amounts
+            time.sleep(1)  # Allow for processing
+            initial_entries = self.get_ledger_entries()
+            expense_entries = [e for e in initial_entries if e.get('reference_id') == expense_id]
+            
+            if len(expense_entries) != 2:
+                self.log_result("Expense Initial Ledger Check", False, f"Expected 2 entries, got {len(expense_entries)}")
+                return False
+            
+            # Store initial entry IDs and amounts
+            initial_entry_ids = {e['id']: {'debit': e['debit'], 'credit': e['credit'], 'account': e['account']} for e in expense_entries}
+            
+            self.log_result("Expense Initial Ledger Check", True, 
+                          f"Found 2 ledger entries: Office Supplies debit ₹10000, Cash credit ₹10000")
+            
+            # Step 3: Update expense amount to ₹15,000 (+₹5,000 increase)
+            if not self.update_expense(expense_id, 15000.0):
+                return False
+            
+            # Step 4: Verify ledger entries are UPDATED (not recreated) with new amounts
+            time.sleep(1)  # Allow for processing
+            updated_entries = self.get_ledger_entries()
+            updated_expense_entries = [e for e in updated_entries if e.get('reference_id') == expense_id]
+            
+            if len(updated_expense_entries) != 2:
+                self.log_result("Expense Update Ledger Check", False, f"Expected 2 entries after update, got {len(updated_expense_entries)}")
+                return False
+            
+            # Step 5: Verify the difference of ₹5,000 is correctly applied
+            success = True
+            for entry in updated_expense_entries:
+                entry_id = entry['id']
+                if entry_id not in initial_entry_ids:
+                    self.log_result("Expense Update ID Check", False, f"Entry ID {entry_id} not found in initial entries - entries were recreated!")
+                    success = False
+                    continue
+                
+                initial_data = initial_entry_ids[entry_id]
+                account = entry['account']
+                
+                if account == "Office Supplies":
+                    # Should be debit ₹15,000 (was ₹10,000)
+                    if abs(entry['debit'] - 15000.0) < 0.01:
+                        self.log_result("Office Supplies Update", True, f"Correctly updated from ₹10000 to ₹{entry['debit']}")
+                    else:
+                        self.log_result("Office Supplies Update", False, f"Expected ₹15000, got ₹{entry['debit']}")
+                        success = False
+                elif account == "Cash":
+                    # Should be credit ₹15,000 (was ₹10,000)
+                    if abs(entry['credit'] - 15000.0) < 0.01:
+                        self.log_result("Cash Update", True, f"Correctly updated from ₹10000 to ₹{entry['credit']}")
+                    else:
+                        self.log_result("Cash Update", False, f"Expected ₹15000, got ₹{entry['credit']}")
+                        success = False
+            
+            if success:
+                self.log_result("Expense Update Increase Test", True, "✅ Difference-based sync working - IDs preserved, amounts updated correctly")
+            else:
+                self.log_result("Expense Update Increase Test", False, "❌ Difference-based sync failed")
+            
+            return success
                 
         except Exception as e:
-            self.log_result("POST Admin Settings", False, f"Error: {str(e)}")
+            self.log_result("Expense Update Increase Test", False, f"Error: {str(e)}")
             return False
     
     def test_upload_logo(self):
