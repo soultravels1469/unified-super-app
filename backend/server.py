@@ -798,6 +798,8 @@ async def get_admin_settings():
             "invoice_terms": "",
             "signature_path": "",
             "show_logo_on_invoice": True,
+            # Auto Expense Sync
+            "auto_expense_sync": True,
             # Other
             "address": "",
             "phone": "",
