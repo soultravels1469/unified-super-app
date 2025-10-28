@@ -10,8 +10,6 @@ import os
 import sys
 from pathlib import Path
 import uuid
-from PIL import Image
-import io
 import time
 
 # Configuration
