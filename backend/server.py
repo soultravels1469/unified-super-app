@@ -239,29 +239,18 @@ def calculate_cost_profit(sale_price: float, cost_price_details: List[Dict]) -> 
 
 async def create_linked_expenses(revenue_id: str, revenue_data: dict):
     """Create expense entries from cost_price_details"""
-    logging.info(f"create_linked_expenses called with revenue_id: {revenue_id}")
-    
     # Check if auto-expense sync is enabled
     settings = await db.admin_settings.find_one({})
-    auto_sync_enabled = settings.get('auto_expense_sync', True) if settings else True
-    logging.info(f"Auto-expense sync enabled: {auto_sync_enabled}")
-    
-    if settings and not auto_sync_enabled:
-        logging.info("Auto-expense sync is disabled, returning empty list")
+    if settings and not settings.get('auto_expense_sync', True):
         return []
     
     cost_details = revenue_data.get('cost_price_details', [])
-    logging.info(f"Found {len(cost_details)} cost details: {cost_details}")
-    
     if not cost_details:
-        logging.info("No cost details found, returning empty list")
         return []
     
     linked_expense_ids = []
     
-    for i, detail in enumerate(cost_details):
-        logging.info(f"Processing cost detail {i+1}: {detail}")
-        
+    for detail in cost_details:
         expense_data = {
             'id': str(uuid.uuid4()),
             'date': detail.get('payment_date', revenue_data['date']),
@@ -278,21 +267,16 @@ async def create_linked_expenses(revenue_id: str, revenue_data: dict):
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
-        logging.info(f"Creating expense: {expense_data}")
-        
         # Insert expense
         await db.expenses.insert_one(expense_data)
-        logging.info(f"Expense inserted with ID: {expense_data['id']}")
         
         # Create accounting ledger entry for expense
         await accounting.create_expense_ledger_entry(expense_data)
-        logging.info(f"Ledger entry created for expense: {expense_data['id']}")
         
         # Update detail with linked_expense_id
         detail['linked_expense_id'] = expense_data['id']
         linked_expense_ids.append(expense_data['id'])
     
-    logging.info(f"Created {len(linked_expense_ids)} linked expenses: {linked_expense_ids}")
     return linked_expense_ids
 
 async def update_linked_expenses(revenue_id: str, old_details: List, new_details: List):
