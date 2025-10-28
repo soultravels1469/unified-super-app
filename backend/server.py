@@ -363,14 +363,37 @@ async def get_revenues():
 
 @api_router.post("/revenue", response_model=Revenue)
 async def create_revenue(revenue: RevenueCreate):
-    revenue_obj = Revenue(**revenue.model_dump())
+    revenue_dict = revenue.model_dump()
+    
+    # Calculate cost, profit, and profit margin
+    sale_price = revenue_dict.get('sale_price', 0)
+    cost_price_details = revenue_dict.get('cost_price_details', [])
+    
+    calculations = calculate_cost_profit(sale_price, cost_price_details)
+    revenue_dict.update(calculations)
+    
+    # Create revenue object
+    revenue_obj = Revenue(**revenue_dict)
     doc = revenue_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
+    
+    # Insert revenue
     await db.revenues.insert_one(doc)
+    
+    # Create linked expenses from cost details
+    if cost_price_details:
+        await create_linked_expenses(revenue_obj.id, doc)
+        # Re-fetch to get updated linked_expense_ids
+        updated_doc = await db.revenues.find_one({'id': revenue_obj.id}, {'_id': 0})
+        if updated_doc:
+            await db.revenues.update_one(
+                {'id': revenue_obj.id},
+                {'$set': {'cost_price_details': updated_doc.get('cost_price_details', [])}}
+            )
     
     # Create accounting ledger entry if revenue is received
     if revenue_obj.status == 'Received' and revenue_obj.received_amount > 0:
-        await accounting.create_revenue_ledger_entry(revenue_obj.model_dump())
+        await accounting.create_revenue_ledger_entry(doc)
     
     return revenue_obj
 
