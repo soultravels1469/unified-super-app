@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Admin Settings Endpoints
-Tests all Admin Settings functionality including file uploads and bank account management
+Backend API Testing for Difference-Based Sync Logic
+Tests Revenue and Expense UPDATE operations to verify difference-based sync instead of delete-recreate
 """
 
 import requests
@@ -12,6 +12,7 @@ from pathlib import Path
 import uuid
 from PIL import Image
 import io
+import time
 
 # Configuration
 BACKEND_URL = "https://travelledger-2.preview.emergentagent.com/api"
