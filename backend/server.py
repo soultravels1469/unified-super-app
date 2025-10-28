@@ -63,6 +63,15 @@ class LoginResponse(BaseModel):
     username: str
     role: str
 
+class CostPriceDetail(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_name: str
+    category: str  # Hotel/Flight/Land/Other
+    amount: float
+    payment_date: str
+    notes: Optional[str] = ""
+    linked_expense_id: Optional[str] = None
+
 class Revenue(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -75,6 +84,11 @@ class Revenue(BaseModel):
     status: str  # Pending/Received
     supplier: Optional[str] = ""
     notes: Optional[str] = ""
+    sale_price: Optional[float] = 0.0
+    cost_price_details: Optional[List[Dict]] = []
+    total_cost_price: Optional[float] = 0.0
+    profit: Optional[float] = 0.0
+    profit_margin: Optional[float] = 0.0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RevenueCreate(BaseModel):
@@ -87,6 +101,8 @@ class RevenueCreate(BaseModel):
     status: str
     supplier: Optional[str] = ""
     notes: Optional[str] = ""
+    sale_price: Optional[float] = 0.0
+    cost_price_details: Optional[List[Dict]] = []
 
 class RevenueUpdate(BaseModel):
     date: Optional[str] = None
