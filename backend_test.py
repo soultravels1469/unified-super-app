@@ -19,7 +19,7 @@ BACKEND_URL = "https://travelledger-2.preview.emergentagent.com/api"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-class AdminSettingsAPITester:
+class DifferenceSyncTester:
     def __init__(self):
         self.base_url = BACKEND_URL
         self.token = None
