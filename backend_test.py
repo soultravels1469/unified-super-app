@@ -81,6 +81,75 @@ class SaleCostTrackingTester:
             self.log_result("Get Ledger Entries", False, f"Error: {str(e)}")
             return []
     
+    def get_expenses(self):
+        """Get all expenses"""
+        try:
+            response = requests.get(f"{self.base_url}/expenses", headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.log_result("Get Expenses", False, f"Failed with status {response.status_code}", response.text)
+                return []
+        except Exception as e:
+            self.log_result("Get Expenses", False, f"Error: {str(e)}")
+            return []
+    
+    def get_revenue(self, revenue_id):
+        """Get specific revenue by ID"""
+        try:
+            response = requests.get(f"{self.base_url}/revenue", headers=self.headers)
+            if response.status_code == 200:
+                revenues = response.json()
+                for rev in revenues:
+                    if rev.get('id') == revenue_id:
+                        return rev
+                return None
+            else:
+                self.log_result("Get Revenue", False, f"Failed with status {response.status_code}", response.text)
+                return None
+        except Exception as e:
+            self.log_result("Get Revenue", False, f"Error: {str(e)}")
+            return None
+    
+    def get_admin_settings(self):
+        """Get admin settings"""
+        try:
+            response = requests.get(f"{self.base_url}/admin/settings", headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.log_result("Get Admin Settings", False, f"Failed with status {response.status_code}", response.text)
+                return None
+        except Exception as e:
+            self.log_result("Get Admin Settings", False, f"Error: {str(e)}")
+            return None
+    
+    def update_admin_settings(self, settings):
+        """Update admin settings"""
+        try:
+            response = requests.post(f"{self.base_url}/admin/settings", json=settings, headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.log_result("Update Admin Settings", False, f"Failed with status {response.status_code}", response.text)
+                return None
+        except Exception as e:
+            self.log_result("Update Admin Settings", False, f"Error: {str(e)}")
+            return None
+    
+    def delete_revenue(self, revenue_id):
+        """Delete revenue"""
+        try:
+            response = requests.delete(f"{self.base_url}/revenue/{revenue_id}", headers=self.headers)
+            if response.status_code == 200:
+                return True
+            else:
+                self.log_result("Delete Revenue", False, f"Failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Delete Revenue", False, f"Error: {str(e)}")
+            return False
+    
     def create_expense(self, amount, category="Office Supplies", payment_mode="Cash"):
         """Create a test expense"""
         try:
