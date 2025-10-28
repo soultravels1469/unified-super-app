@@ -76,6 +76,10 @@ def debug_revenue_creation():
         
         revenue_id = revenue_response.get('id')
         
+        # Wait a moment for expense creation
+        import time
+        time.sleep(2)
+        
         # Check expenses
         print("\n🔍 Checking created expenses...")
         expenses_response = requests.get(f"{BACKEND_URL}/expenses", headers=headers)
@@ -89,6 +93,7 @@ def debug_revenue_creation():
                 print(f"   - Expense ID: {exp.get('id')}")
                 print(f"   - Amount: ₹{exp.get('amount')}")
                 print(f"   - Description: {exp.get('description')}")
+                print(f"   - Linked Revenue ID: {exp.get('linked_revenue_id')}")
         
         # Check admin settings
         print("\n🔍 Checking admin settings...")
