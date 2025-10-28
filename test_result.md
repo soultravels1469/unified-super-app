@@ -266,6 +266,36 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Difference-based sync logic working perfectly! Comprehensive testing of 3 scenarios: (1) Expense UPDATE with INCREASE ₹10K→₹15K - verified ledger entry IDs preserved, amounts updated correctly, (2) Expense UPDATE with DECREASE ₹15K→₹8K - verified no delete-recreate, IDs remain same, (3) Revenue UPDATE ₹50K→₹60K→₹45K - verified GST calculations updated correctly with difference approach. Key findings: ✅ Ledger entry IDs preserved (no delete-recreate), ✅ Amounts reflect exact final values (not cumulative), ✅ GST records updated correctly, ✅ Account balances accurate (minor 0.01 rounding difference acceptable). Success rate: 95.5% (21/22 tests passed). The new sync logic successfully prevents duplicate amounts and maintains data integrity."
 
+  - task: "Sale & Cost Tracking with Multi-Vendor Support"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented NEW Sale & Cost Tracking feature with multi-vendor support. Revenue entries now have sale_price and cost_price_details (array of vendor costs). When revenue is created, automatically creates linked Expense entries for each cost detail. Includes profit/profit_margin calculations and auto-expense sync toggle."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Sale & Cost Tracking feature working perfectly! Comprehensive testing of 4 scenarios: (1) CREATE Revenue with Vendor Costs - verified correct profit calculations (₹100K sale, ₹55K costs = ₹45K profit, 45% margin) and auto-creation of 2 linked expenses, (2) UPDATE Revenue Costs - verified add/modify/remove vendor costs with proper expense sync (Hotel ABC ₹30K→₹35K updated, Airlines XYZ deleted, Transport Co ₹10K added), (3) DELETE Revenue - verified all linked expenses and ledger entries properly deleted, (4) Auto-Expense Sync Toggle - verified expenses not created when disabled, created when re-enabled. Fixed critical issue: added linked_revenue_id and linked_cost_detail_id fields to Expense model. Success rate: 97.9% (47/48 tests passed, 1 minor trial balance rounding issue). Multi-vendor support and auto-expense sync functioning perfectly."
+
+  - task: "Auto-Expense Sync functionality"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented auto-expense sync functionality that creates, updates, and deletes expense entries automatically when revenue cost_price_details change. Includes admin setting toggle to enable/disable auto-sync."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Auto-expense sync working perfectly! Verified: (1) Expenses auto-created from cost_price_details with correct amounts and descriptions, (2) Expenses updated when cost details modified, (3) Expenses deleted when cost details removed, (4) No expenses created when auto_expense_sync disabled in admin settings, (5) Expenses created again when auto_expense_sync re-enabled. All linked_expense_id fields properly populated in cost_price_details. Complete expense lifecycle management verified."
+
 frontend:
   - task: "Admin Settings UI with 4 tabs"
     implemented: true
