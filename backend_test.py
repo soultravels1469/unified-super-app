@@ -1007,17 +1007,22 @@ class SaleCostTrackingTester:
             return False
     
     def run_all_tests(self):
-        """Run all difference-based sync tests"""
-        print("🚀 Starting Difference-Based Sync Logic Tests...")
-        print("=" * 70)
-        print("Testing NEW difference-based sync logic for Revenue and Expense updates")
-        print("Verifying that updates use difference calculations instead of delete-recreate")
-        print("=" * 70)
+        """Run all Sale & Cost Tracking and Difference-Based Sync tests"""
+        print("🚀 Starting Comprehensive Backend API Tests...")
+        print("=" * 80)
+        print("Testing NEW Sale & Cost Tracking feature with multi-vendor support")
+        print("Testing auto-expense sync functionality")
+        print("Testing difference-based sync logic for Revenue and Expense updates")
+        print("=" * 80)
         
         # Login first
         if not self.login():
             print("❌ Cannot proceed without authentication")
             return False
+        
+        # Run Sale & Cost Tracking Tests
+        print("\n📋 Testing Sale & Cost Tracking Feature...")
+        self.run_sale_cost_tracking_tests()
         
         print("\n📋 Testing Difference-Based Sync Logic...")
         
@@ -1035,9 +1040,9 @@ class SaleCostTrackingTester:
         test5_success = self.test_gst_records_update()
         
         # Summary
-        print("\n" + "=" * 70)
-        print("📊 DIFFERENCE-BASED SYNC TEST SUMMARY")
-        print("=" * 70)
+        print("\n" + "=" * 80)
+        print("📊 COMPREHENSIVE BACKEND TEST SUMMARY")
+        print("=" * 80)
         
         passed = sum(1 for result in self.test_results if result['success'])
         total = len(self.test_results)
@@ -1049,6 +1054,19 @@ class SaleCostTrackingTester:
         
         # Key findings summary
         print("\n🔍 KEY FINDINGS:")
+        
+        # Sale & Cost Tracking findings
+        sale_cost_tests = [r for r in self.test_results if any(keyword in r['test'] for keyword in ['Revenue with Vendor Costs', 'Update Revenue Costs', 'Delete Revenue with Linked', 'Auto-Expense Sync'])]
+        sale_cost_passed = sum(1 for r in sale_cost_tests if r['success'])
+        
+        if sale_cost_passed == len(sale_cost_tests) and len(sale_cost_tests) > 0:
+            print("✅ SALE & COST TRACKING: Multi-vendor support working correctly")
+            print("✅ AUTO-EXPENSE SYNC: Linked expenses created, updated, and deleted properly")
+            print("✅ COST CALCULATIONS: Profit and profit margin calculated accurately")
+        else:
+            print("❌ SALE & COST TRACKING ISSUES DETECTED")
+        
+        # Difference-based sync findings
         if test1_success and test2_success and test3_success:
             print("✅ DIFFERENCE-BASED SYNC WORKING: Ledger entry IDs are preserved during updates")
             print("✅ AMOUNTS ACCURATE: Final amounts reflect exact values (not cumulative)")
