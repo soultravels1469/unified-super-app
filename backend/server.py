@@ -299,6 +299,8 @@ async def update_expense(expense_id: str, update: ExpenseUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="Expense not found")
     
+    old_amount = existing.get('amount', 0)
+    
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     if update_data:
         await db.expenses.update_one({"id": expense_id}, {"$set": update_data})
@@ -307,16 +309,12 @@ async def update_expense(expense_id: str, update: ExpenseUpdate):
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     
-    # Sync with accounting - delete old entries and create new
-    await db.ledgers.delete_many({"reference_id": expense_id})
-    await db.gst_records.delete_many({"reference_id": expense_id})
+    # Sync with accounting using difference-based approach
+    new_amount = updated.get('amount', 0)
     
-    # Recreate accounting entries with updated data
-    await accounting.create_expense_ledger_entry(updated)
-    
-    # If it's a purchase for resale with GST, recreate GST record
-    if updated.get('purchase_type') == 'Purchase for Resale' and updated.get('gst_rate', 0) > 0:
-        await accounting.create_input_gst_record(updated)
+    if new_amount != old_amount:
+        # Update existing ledger entries with the difference
+        await accounting.update_expense_ledger_entry(expense_id, old_amount, new_amount, updated)
     
     return Expense(**updated)
 
