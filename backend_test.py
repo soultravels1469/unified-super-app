@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Difference-Based Sync Logic
-Tests Revenue and Expense UPDATE operations to verify difference-based sync instead of delete-recreate
+Backend API Testing for Sale & Cost Tracking with Multi-Vendor Support
+Tests NEW Sale & Cost Tracking feature with auto-expense sync functionality
+Also includes Difference-Based Sync Logic tests
 """
 
 import requests
