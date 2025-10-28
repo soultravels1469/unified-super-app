@@ -67,17 +67,6 @@ class DifferenceSyncTester:
             self.log_result("Admin Login", False, f"Login error: {str(e)}")
             return False
     
-    def create_test_image(self, filename, size=(100, 100)):
-        """Create a test image file"""
-        try:
-            # Create a simple test image
-            img = Image.new('RGB', size, color='red')
-            img_path = Path(f"/tmp/{filename}")
-            img.save(img_path, 'PNG')
-            return str(img_path)
-        except Exception as e:
-            print(f"Error creating test image: {e}")
-            return None
     
     def get_ledger_entries(self):
         """Get all ledger entries"""
