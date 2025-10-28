@@ -66,7 +66,7 @@ function Revenue() {
       </div>
 
       {showForm && (
-        <RevenueForm
+        <RevenueFormEnhanced
           revenue={editingRevenue}
           onClose={handleFormClose}
         />
