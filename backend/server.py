@@ -129,6 +129,8 @@ class Expense(BaseModel):
     supplier_gstin: Optional[str] = ""
     invoice_number: Optional[str] = ""
     gst_rate: Optional[float] = 0.0
+    linked_revenue_id: Optional[str] = None
+    linked_cost_detail_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ExpenseCreate(BaseModel):
