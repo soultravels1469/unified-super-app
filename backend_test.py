@@ -150,6 +150,457 @@ class SaleCostTrackingTester:
             self.log_result("Delete Revenue", False, f"Error: {str(e)}")
             return False
     
+    # ===== SALE & COST TRACKING TESTS =====
+    
+    def test_create_revenue_with_vendor_costs(self):
+        """Test Scenario 1: CREATE Revenue with Vendor Costs"""
+        try:
+            print("\n🔍 SCENARIO 1: CREATE Revenue with Vendor Costs")
+            
+            # Create revenue with sale_price and cost_price_details
+            revenue_data = {
+                "date": "2025-01-28",
+                "client_name": "Adventure Tours Ltd",
+                "source": "Package",
+                "payment_mode": "Bank Transfer",
+                "pending_amount": 0.0,
+                "received_amount": 100000.0,
+                "status": "Received",
+                "sale_price": 100000.0,
+                "cost_price_details": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Hotel ABC",
+                        "category": "Hotel",
+                        "amount": 30000,
+                        "payment_date": "2025-01-28",
+                        "notes": "Luxury hotel booking"
+                    },
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Airlines XYZ",
+                        "category": "Flight",
+                        "amount": 25000,
+                        "payment_date": "2025-01-28",
+                        "notes": "Round trip flights"
+                    }
+                ]
+            }
+            
+            response = requests.post(f"{self.base_url}/revenue", json=revenue_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Revenue with Costs", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            revenue_response = response.json()
+            revenue_id = revenue_response.get('id')
+            
+            # Verify calculated fields
+            expected_total_cost = 55000  # 30000 + 25000
+            expected_profit = 45000     # 100000 - 55000
+            expected_profit_margin = 45.0  # (45000/100000) * 100
+            
+            if abs(revenue_response.get('total_cost_price', 0) - expected_total_cost) < 0.01:
+                self.log_result("Total Cost Calculation", True, f"Correct total cost: ₹{revenue_response.get('total_cost_price')}")
+            else:
+                self.log_result("Total Cost Calculation", False, f"Expected ₹{expected_total_cost}, got ₹{revenue_response.get('total_cost_price')}")
+                return False
+            
+            if abs(revenue_response.get('profit', 0) - expected_profit) < 0.01:
+                self.log_result("Profit Calculation", True, f"Correct profit: ₹{revenue_response.get('profit')}")
+            else:
+                self.log_result("Profit Calculation", False, f"Expected ₹{expected_profit}, got ₹{revenue_response.get('profit')}")
+                return False
+            
+            if abs(revenue_response.get('profit_margin', 0) - expected_profit_margin) < 0.01:
+                self.log_result("Profit Margin Calculation", True, f"Correct profit margin: {revenue_response.get('profit_margin')}%")
+            else:
+                self.log_result("Profit Margin Calculation", False, f"Expected {expected_profit_margin}%, got {revenue_response.get('profit_margin')}%")
+                return False
+            
+            # Verify auto-created expenses
+            time.sleep(2)  # Allow for expense creation
+            expenses = self.get_expenses()
+            auto_expenses = [exp for exp in expenses if exp.get('linked_revenue_id') == revenue_id]
+            
+            if len(auto_expenses) == 2:
+                self.log_result("Auto-Expense Creation", True, f"Created {len(auto_expenses)} linked expenses")
+            else:
+                self.log_result("Auto-Expense Creation", False, f"Expected 2 auto-expenses, got {len(auto_expenses)}")
+                return False
+            
+            # Verify expense details
+            hotel_expense = next((exp for exp in auto_expenses if "Hotel ABC" in exp.get('description', '')), None)
+            airline_expense = next((exp for exp in auto_expenses if "Airlines XYZ" in exp.get('description', '')), None)
+            
+            if hotel_expense and abs(hotel_expense.get('amount', 0) - 30000) < 0.01:
+                self.log_result("Hotel Expense Amount", True, f"Hotel expense: ₹{hotel_expense.get('amount')}")
+            else:
+                self.log_result("Hotel Expense Amount", False, f"Hotel expense amount incorrect")
+                return False
+            
+            if airline_expense and abs(airline_expense.get('amount', 0) - 25000) < 0.01:
+                self.log_result("Airline Expense Amount", True, f"Airline expense: ₹{airline_expense.get('amount')}")
+            else:
+                self.log_result("Airline Expense Amount", False, f"Airline expense amount incorrect")
+                return False
+            
+            # Verify linked_expense_id populated in cost details
+            updated_revenue = self.get_revenue(revenue_id)
+            if updated_revenue:
+                cost_details = updated_revenue.get('cost_price_details', [])
+                linked_count = sum(1 for detail in cost_details if detail.get('linked_expense_id'))
+                
+                if linked_count == 2:
+                    self.log_result("Linked Expense IDs", True, f"All {linked_count} cost details have linked_expense_id")
+                else:
+                    self.log_result("Linked Expense IDs", False, f"Expected 2 linked IDs, got {linked_count}")
+                    return False
+            
+            self.log_result("Create Revenue with Vendor Costs", True, "✅ Revenue created with correct calculations and auto-expenses")
+            return revenue_id
+            
+        except Exception as e:
+            self.log_result("Create Revenue with Vendor Costs", False, f"Error: {str(e)}")
+            return False
+    
+    def test_update_revenue_costs(self, revenue_id):
+        """Test Scenario 2: UPDATE Revenue - Add/Modify/Remove Costs"""
+        try:
+            print("\n🔍 SCENARIO 2: UPDATE Revenue - Add/Modify/Remove Costs")
+            
+            if not revenue_id:
+                self.log_result("Update Revenue Costs", False, "No revenue ID provided")
+                return False
+            
+            # Get current revenue state
+            current_revenue = self.get_revenue(revenue_id)
+            if not current_revenue:
+                self.log_result("Get Current Revenue", False, "Could not fetch current revenue")
+                return False
+            
+            current_costs = current_revenue.get('cost_price_details', [])
+            
+            # Prepare updated cost details:
+            # - Add new vendor: Transport Co
+            # - Modify Hotel ABC amount from 30000 to 35000
+            # - Remove Airlines XYZ
+            
+            updated_costs = []
+            
+            # Keep and modify Hotel ABC
+            for cost in current_costs:
+                if cost.get('vendor_name') == 'Hotel ABC':
+                    cost['amount'] = 35000  # Modify amount
+                    updated_costs.append(cost)
+                # Skip Airlines XYZ (remove it)
+            
+            # Add new Transport Co
+            updated_costs.append({
+                "id": str(uuid.uuid4()),
+                "vendor_name": "Transport Co",
+                "category": "Land",
+                "amount": 10000,
+                "payment_date": "2025-01-28",
+                "notes": "Local transportation"
+            })
+            
+            # Update revenue
+            update_data = {
+                "cost_price_details": updated_costs
+            }
+            
+            response = requests.put(f"{self.base_url}/revenue/{revenue_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Update Revenue Costs", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            updated_revenue = response.json()
+            
+            # Verify recalculated totals
+            expected_total_cost = 45000  # 35000 (Hotel) + 10000 (Transport)
+            expected_profit = 55000     # 100000 - 45000
+            expected_profit_margin = 55.0  # (55000/100000) * 100
+            
+            if abs(updated_revenue.get('total_cost_price', 0) - expected_total_cost) < 0.01:
+                self.log_result("Updated Total Cost", True, f"Recalculated total cost: ₹{updated_revenue.get('total_cost_price')}")
+            else:
+                self.log_result("Updated Total Cost", False, f"Expected ₹{expected_total_cost}, got ₹{updated_revenue.get('total_cost_price')}")
+                return False
+            
+            # Verify expense changes
+            time.sleep(2)  # Allow for expense updates
+            expenses = self.get_expenses()
+            auto_expenses = [exp for exp in expenses if exp.get('linked_revenue_id') == revenue_id]
+            
+            # Should have 2 expenses: Hotel ABC (updated) and Transport Co (new)
+            if len(auto_expenses) == 2:
+                self.log_result("Updated Expense Count", True, f"Correct expense count: {len(auto_expenses)}")
+            else:
+                self.log_result("Updated Expense Count", False, f"Expected 2 expenses, got {len(auto_expenses)}")
+                return False
+            
+            # Verify Hotel ABC expense updated to 35000
+            hotel_expense = next((exp for exp in auto_expenses if "Hotel ABC" in exp.get('description', '')), None)
+            if hotel_expense and abs(hotel_expense.get('amount', 0) - 35000) < 0.01:
+                self.log_result("Hotel Expense Updated", True, f"Hotel expense updated to ₹{hotel_expense.get('amount')}")
+            else:
+                self.log_result("Hotel Expense Updated", False, f"Hotel expense not updated correctly")
+                return False
+            
+            # Verify Transport Co expense created
+            transport_expense = next((exp for exp in auto_expenses if "Transport Co" in exp.get('description', '')), None)
+            if transport_expense and abs(transport_expense.get('amount', 0) - 10000) < 0.01:
+                self.log_result("Transport Expense Created", True, f"Transport expense created: ₹{transport_expense.get('amount')}")
+            else:
+                self.log_result("Transport Expense Created", False, f"Transport expense not created correctly")
+                return False
+            
+            # Verify Airlines XYZ expense deleted
+            airline_expense = next((exp for exp in auto_expenses if "Airlines XYZ" in exp.get('description', '')), None)
+            if airline_expense is None:
+                self.log_result("Airline Expense Deleted", True, "Airlines XYZ expense correctly deleted")
+            else:
+                self.log_result("Airline Expense Deleted", False, "Airlines XYZ expense still exists")
+                return False
+            
+            self.log_result("Update Revenue Costs", True, "✅ Revenue costs updated correctly with expense sync")
+            return True
+            
+        except Exception as e:
+            self.log_result("Update Revenue Costs", False, f"Error: {str(e)}")
+            return False
+    
+    def test_delete_revenue_with_linked_expenses(self, revenue_id):
+        """Test Scenario 3: DELETE Revenue"""
+        try:
+            print("\n🔍 SCENARIO 3: DELETE Revenue with Linked Expenses")
+            
+            if not revenue_id:
+                self.log_result("Delete Revenue Test", False, "No revenue ID provided")
+                return False
+            
+            # Get expenses before deletion
+            expenses_before = self.get_expenses()
+            linked_expenses_before = [exp for exp in expenses_before if exp.get('linked_revenue_id') == revenue_id]
+            
+            self.log_result("Linked Expenses Before Delete", True, f"Found {len(linked_expenses_before)} linked expenses")
+            
+            # Get ledger entries before deletion
+            ledger_before = self.get_ledger_entries()
+            revenue_ledger_before = [entry for entry in ledger_before if entry.get('reference_id') == revenue_id]
+            expense_ledger_before = []
+            for exp in linked_expenses_before:
+                expense_ledger_before.extend([entry for entry in ledger_before if entry.get('reference_id') == exp.get('id')])
+            
+            self.log_result("Ledger Entries Before Delete", True, 
+                          f"Revenue ledger: {len(revenue_ledger_before)}, Expense ledger: {len(expense_ledger_before)}")
+            
+            # Delete revenue
+            if not self.delete_revenue(revenue_id):
+                return False
+            
+            # Verify revenue deleted
+            deleted_revenue = self.get_revenue(revenue_id)
+            if deleted_revenue is None:
+                self.log_result("Revenue Deleted", True, "Revenue successfully deleted")
+            else:
+                self.log_result("Revenue Deleted", False, "Revenue still exists")
+                return False
+            
+            # Verify linked expenses deleted
+            time.sleep(2)  # Allow for cleanup
+            expenses_after = self.get_expenses()
+            linked_expenses_after = [exp for exp in expenses_after if exp.get('linked_revenue_id') == revenue_id]
+            
+            if len(linked_expenses_after) == 0:
+                self.log_result("Linked Expenses Deleted", True, "All linked expenses deleted")
+            else:
+                self.log_result("Linked Expenses Deleted", False, f"{len(linked_expenses_after)} linked expenses still exist")
+                return False
+            
+            # Verify ledger entries cleaned up
+            ledger_after = self.get_ledger_entries()
+            revenue_ledger_after = [entry for entry in ledger_after if entry.get('reference_id') == revenue_id]
+            
+            if len(revenue_ledger_after) == 0:
+                self.log_result("Revenue Ledger Cleaned", True, "Revenue ledger entries deleted")
+            else:
+                self.log_result("Revenue Ledger Cleaned", False, f"{len(revenue_ledger_after)} revenue ledger entries still exist")
+                return False
+            
+            # Check expense ledger entries also cleaned
+            expense_ledger_after = []
+            for exp in linked_expenses_before:
+                expense_ledger_after.extend([entry for entry in ledger_after if entry.get('reference_id') == exp.get('id')])
+            
+            if len(expense_ledger_after) == 0:
+                self.log_result("Expense Ledger Cleaned", True, "Expense ledger entries deleted")
+            else:
+                self.log_result("Expense Ledger Cleaned", False, f"{len(expense_ledger_after)} expense ledger entries still exist")
+                return False
+            
+            self.log_result("Delete Revenue with Linked Expenses", True, "✅ Revenue and all linked data deleted successfully")
+            return True
+            
+        except Exception as e:
+            self.log_result("Delete Revenue with Linked Expenses", False, f"Error: {str(e)}")
+            return False
+    
+    def test_auto_expense_sync_toggle(self):
+        """Test Scenario 4: Auto-Expense Sync Toggle"""
+        try:
+            print("\n🔍 SCENARIO 4: Auto-Expense Sync Toggle")
+            
+            # Get current settings
+            current_settings = self.get_admin_settings()
+            if not current_settings:
+                self.log_result("Get Current Settings", False, "Could not fetch admin settings")
+                return False
+            
+            original_sync_setting = current_settings.get('auto_expense_sync', True)
+            
+            # Disable auto_expense_sync
+            updated_settings = current_settings.copy()
+            updated_settings['auto_expense_sync'] = False
+            
+            if not self.update_admin_settings(updated_settings):
+                self.log_result("Disable Auto Sync", False, "Could not update admin settings")
+                return False
+            
+            self.log_result("Disable Auto Sync", True, "Auto-expense sync disabled")
+            
+            # Create revenue with cost details
+            revenue_data = {
+                "date": "2025-01-28",
+                "client_name": "Test Client for Sync Toggle",
+                "source": "Visa",
+                "payment_mode": "Cash",
+                "pending_amount": 0.0,
+                "received_amount": 50000.0,
+                "status": "Received",
+                "sale_price": 50000.0,
+                "cost_price_details": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Test Vendor",
+                        "category": "Other",
+                        "amount": 20000,
+                        "payment_date": "2025-01-28"
+                    }
+                ]
+            }
+            
+            response = requests.post(f"{self.base_url}/revenue", json=revenue_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Revenue with Sync Disabled", False, f"Failed with status {response.status_code}")
+                return False
+            
+            revenue_response = response.json()
+            test_revenue_id = revenue_response.get('id')
+            
+            # Verify NO expenses were created
+            time.sleep(2)
+            expenses = self.get_expenses()
+            auto_expenses = [exp for exp in expenses if exp.get('linked_revenue_id') == test_revenue_id]
+            
+            if len(auto_expenses) == 0:
+                self.log_result("No Auto Expenses Created", True, "Correctly no expenses created when sync disabled")
+            else:
+                self.log_result("No Auto Expenses Created", False, f"Unexpected {len(auto_expenses)} expenses created")
+                return False
+            
+            # Re-enable auto_expense_sync
+            updated_settings['auto_expense_sync'] = True
+            
+            if not self.update_admin_settings(updated_settings):
+                self.log_result("Re-enable Auto Sync", False, "Could not re-enable auto sync")
+                return False
+            
+            self.log_result("Re-enable Auto Sync", True, "Auto-expense sync re-enabled")
+            
+            # Create another revenue to verify sync works again
+            revenue_data2 = {
+                "date": "2025-01-28",
+                "client_name": "Test Client for Sync Re-enabled",
+                "source": "Package",
+                "payment_mode": "Bank Transfer",
+                "pending_amount": 0.0,
+                "received_amount": 30000.0,
+                "status": "Received",
+                "sale_price": 30000.0,
+                "cost_price_details": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Test Vendor 2",
+                        "category": "Hotel",
+                        "amount": 15000,
+                        "payment_date": "2025-01-28"
+                    }
+                ]
+            }
+            
+            response2 = requests.post(f"{self.base_url}/revenue", json=revenue_data2, headers=self.headers)
+            
+            if response2.status_code != 200:
+                self.log_result("Create Revenue with Sync Enabled", False, f"Failed with status {response2.status_code}")
+                return False
+            
+            revenue_response2 = response2.json()
+            test_revenue_id2 = revenue_response2.get('id')
+            
+            # Verify expenses ARE created now
+            time.sleep(2)
+            expenses = self.get_expenses()
+            auto_expenses2 = [exp for exp in expenses if exp.get('linked_revenue_id') == test_revenue_id2]
+            
+            if len(auto_expenses2) == 1:
+                self.log_result("Auto Expenses Created After Re-enable", True, f"Correctly created {len(auto_expenses2)} expense when sync re-enabled")
+            else:
+                self.log_result("Auto Expenses Created After Re-enable", False, f"Expected 1 expense, got {len(auto_expenses2)}")
+                return False
+            
+            # Cleanup test revenues
+            self.delete_revenue(test_revenue_id)
+            self.delete_revenue(test_revenue_id2)
+            
+            # Restore original setting
+            updated_settings['auto_expense_sync'] = original_sync_setting
+            self.update_admin_settings(updated_settings)
+            
+            self.log_result("Auto-Expense Sync Toggle", True, "✅ Auto-expense sync toggle working correctly")
+            return True
+            
+        except Exception as e:
+            self.log_result("Auto-Expense Sync Toggle", False, f"Error: {str(e)}")
+            return False
+    
+    def run_sale_cost_tracking_tests(self):
+        """Run all Sale & Cost Tracking tests"""
+        print("🚀 Starting Sale & Cost Tracking Tests...")
+        print("=" * 70)
+        print("Testing NEW Sale & Cost Tracking feature with multi-vendor support")
+        print("Testing auto-expense sync functionality")
+        print("=" * 70)
+        
+        # Test Scenario 1: Create Revenue with Vendor Costs
+        revenue_id = self.test_create_revenue_with_vendor_costs()
+        
+        # Test Scenario 2: Update Revenue Costs (only if creation succeeded)
+        if revenue_id:
+            self.test_update_revenue_costs(revenue_id)
+            
+            # Test Scenario 3: Delete Revenue (only if update succeeded)
+            self.test_delete_revenue_with_linked_expenses(revenue_id)
+        
+        # Test Scenario 4: Auto-Expense Sync Toggle
+        self.test_auto_expense_sync_toggle()
+        
+        return True
+
     def create_expense(self, amount, category="Office Supplies", payment_mode="Cash"):
         """Create a test expense"""
         try:
