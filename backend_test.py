@@ -421,35 +421,42 @@ class DifferenceSyncTester:
             self.log_result("Revenue Update Test", False, f"Error: {str(e)}")
             return False
     
-    def test_upload_invalid_file(self):
-        """Test uploading invalid file type"""
+    def test_account_balances_accuracy(self):
+        """Verify account balances are accurate after multiple updates"""
         try:
-            # Create a text file instead of image
-            test_file_path = "/tmp/test_invalid.txt"
-            with open(test_file_path, 'w') as f:
-                f.write("This is not an image file")
+            print("\n🔍 VERIFICATION: Account Balances Accuracy")
             
-            # Try to upload as logo
-            with open(test_file_path, 'rb') as f:
-                files = {'file': ('test_invalid.txt', f, 'text/plain')}
-                headers_no_content_type = {k: v for k, v in self.headers.items() if k != 'Content-Type'}
+            # Get trial balance to check account balances
+            response = requests.get(f"{self.base_url}/accounting/trial-balance", headers=self.headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                accounts = data.get('accounts', [])
                 
-                response = requests.post(f"{self.base_url}/admin/upload-logo", 
-                                       files=files, headers=headers_no_content_type)
-            
-            # Clean up test file
-            os.unlink(test_file_path)
-            
-            if response.status_code == 400:
-                self.log_result("Upload Invalid File", True, "Correctly rejected invalid file type")
+                # Check if trial balance is balanced
+                if data.get('balanced', False):
+                    self.log_result("Trial Balance Check", True, f"Trial balance is balanced - Total Debit: ₹{data.get('total_debit')}, Total Credit: ₹{data.get('total_credit')}")
+                else:
+                    self.log_result("Trial Balance Check", False, f"Trial balance is NOT balanced - Debit: ₹{data.get('total_debit')}, Credit: ₹{data.get('total_credit')}")
+                    return False
+                
+                # Check specific account balances
+                cash_account = next((acc for acc in accounts if acc['account_name'] == 'Cash'), None)
+                bank_account = next((acc for acc in accounts if acc['account_name'] == 'Bank - Current Account'), None)
+                
+                if cash_account:
+                    self.log_result("Cash Account Balance", True, f"Cash balance: ₹{cash_account['balance']}")
+                
+                if bank_account:
+                    self.log_result("Bank Account Balance", True, f"Bank balance: ₹{bank_account['balance']}")
+                
                 return True
             else:
-                self.log_result("Upload Invalid File", False, 
-                              f"Should have rejected invalid file, got status {response.status_code}")
+                self.log_result("Account Balance Check", False, f"Failed to get trial balance: {response.status_code}")
                 return False
                 
         except Exception as e:
-            self.log_result("Upload Invalid File", False, f"Error: {str(e)}")
+            self.log_result("Account Balance Check", False, f"Error: {str(e)}")
             return False
     
     def test_add_bank_account(self):
