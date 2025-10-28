@@ -217,6 +217,142 @@ async def login(request: LoginRequest):
     token = jwt.encode({"username": user['username'], "role": user.get('role', 'admin')}, SECRET_KEY, algorithm=ALGORITHM)
     return LoginResponse(token=token, username=user['username'], role=user.get('role', 'admin'))
 
+# ===== HELPER FUNCTIONS FOR SALE & COST TRACKING =====
+
+def calculate_cost_profit(sale_price: float, cost_price_details: List[Dict]) -> Dict:
+    """Calculate total cost, profit, and profit margin"""
+    total_cost = sum(detail.get('amount', 0) for detail in cost_price_details)
+    profit = sale_price - total_cost
+    profit_margin = (profit / sale_price * 100) if sale_price > 0 else 0
+    
+    return {
+        'total_cost_price': total_cost,
+        'profit': profit,
+        'profit_margin': round(profit_margin, 2)
+    }
+
+async def create_linked_expenses(revenue_id: str, revenue_data: dict):
+    """Create expense entries from cost_price_details"""
+    # Check if auto-expense sync is enabled
+    settings = await db.admin_settings.find_one({})
+    if settings and not settings.get('auto_expense_sync', True):
+        return []
+    
+    cost_details = revenue_data.get('cost_price_details', [])
+    if not cost_details:
+        return []
+    
+    linked_expense_ids = []
+    
+    for detail in cost_details:
+        expense_data = {
+            'id': str(uuid.uuid4()),
+            'date': detail.get('payment_date', revenue_data['date']),
+            'category': detail.get('category', 'Vendor Payment'),
+            'payment_mode': 'Bank Transfer',
+            'amount': detail.get('amount', 0),
+            'description': f"Auto-generated from Revenue - {revenue_data['client_name']} - Vendor: {detail.get('vendor_name', 'N/A')}",
+            'purchase_type': 'General Expense',
+            'supplier_gstin': '',
+            'invoice_number': '',
+            'gst_rate': 0,
+            'linked_revenue_id': revenue_id,
+            'linked_cost_detail_id': detail.get('id'),
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Insert expense
+        await db.expenses.insert_one(expense_data)
+        
+        # Create accounting ledger entry for expense
+        await accounting.create_expense_ledger_entry(expense_data)
+        
+        # Update detail with linked_expense_id
+        detail['linked_expense_id'] = expense_data['id']
+        linked_expense_ids.append(expense_data['id'])
+    
+    return linked_expense_ids
+
+async def update_linked_expenses(revenue_id: str, old_details: List, new_details: List):
+    """Update linked expenses based on cost detail changes"""
+    settings = await db.admin_settings.find_one({})
+    if settings and not settings.get('auto_expense_sync', True):
+        return
+    
+    # Create dict of old details by ID
+    old_details_map = {d.get('id'): d for d in old_details if d.get('id')}
+    new_details_map = {d.get('id'): d for d in new_details if d.get('id')}
+    
+    # Find deleted, updated, and added details
+    old_ids = set(old_details_map.keys())
+    new_ids = set(new_details_map.keys())
+    
+    deleted_ids = old_ids - new_ids
+    added_ids = new_ids - old_ids
+    common_ids = old_ids & new_ids
+    
+    # Delete expenses for removed cost details
+    for detail_id in deleted_ids:
+        expense_id = old_details_map[detail_id].get('linked_expense_id')
+        if expense_id:
+            await db.expenses.delete_one({'id': expense_id})
+            await db.ledgers.delete_many({'reference_id': expense_id})
+    
+    # Update expenses for modified cost details
+    for detail_id in common_ids:
+        old_detail = old_details_map[detail_id]
+        new_detail = new_details_map[detail_id]
+        
+        expense_id = old_detail.get('linked_expense_id')
+        if expense_id and new_detail.get('amount') != old_detail.get('amount'):
+            # Update expense amount
+            old_amount = old_detail.get('amount', 0)
+            new_amount = new_detail.get('amount', 0)
+            
+            await db.expenses.update_one(
+                {'id': expense_id},
+                {'$set': {'amount': new_amount}}
+            )
+            
+            # Update ledger with difference
+            expense = await db.expenses.find_one({'id': expense_id}, {'_id': 0})
+            if expense:
+                await accounting.update_expense_ledger_entry(expense_id, old_amount, new_amount, expense)
+    
+    # Create expenses for added cost details
+    for detail_id in added_ids:
+        detail = new_details_map[detail_id]
+        revenue = await db.revenues.find_one({'id': revenue_id}, {'_id': 0})
+        
+        expense_data = {
+            'id': str(uuid.uuid4()),
+            'date': detail.get('payment_date', revenue['date']),
+            'category': detail.get('category', 'Vendor Payment'),
+            'payment_mode': 'Bank Transfer',
+            'amount': detail.get('amount', 0),
+            'description': f"Auto-generated from Revenue - {revenue['client_name']} - Vendor: {detail.get('vendor_name', 'N/A')}",
+            'purchase_type': 'General Expense',
+            'linked_revenue_id': revenue_id,
+            'linked_cost_detail_id': detail_id,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.expenses.insert_one(expense_data)
+        await accounting.create_expense_ledger_entry(expense_data)
+        
+        # Update detail with linked_expense_id
+        detail['linked_expense_id'] = expense_data['id']
+
+async def delete_linked_expenses(revenue_id: str):
+    """Delete all expenses linked to a revenue entry"""
+    linked_expenses = await db.expenses.find({'linked_revenue_id': revenue_id}, {'_id': 0}).to_list(100)
+    
+    for expense in linked_expenses:
+        expense_id = expense['id']
+        await db.expenses.delete_one({'id': expense_id})
+        await db.ledgers.delete_many({'reference_id': expense_id})
+        await db.gst_records.delete_many({'reference_id': expense_id})
+
 @api_router.get("/revenue", response_model=List[Revenue])
 async def get_revenues():
     revenues = await db.revenues.find({}, {"_id": 0}).to_list(1000)
