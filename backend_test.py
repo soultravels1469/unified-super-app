@@ -1094,16 +1094,17 @@ class SaleCostTrackingTester:
 
 def main():
     """Main test execution"""
-    tester = DifferenceSyncTester()
+    tester = SaleCostTrackingTester()
     success = tester.run_all_tests()
     
     if success:
-        print("\n🎉 All difference-based sync tests passed!")
-        print("✅ The new sync logic is working correctly - no more delete-recreate!")
+        print("\n🎉 All Sale & Cost Tracking and Sync Logic tests passed!")
+        print("✅ The NEW Sale & Cost Tracking feature is working correctly!")
+        print("✅ Multi-vendor support and auto-expense sync functioning properly!")
         return 0
     else:
-        print("\n💥 Some difference-based sync tests failed!")
-        print("❌ Issues detected with the new sync logic - needs investigation")
+        print("\n💥 Some tests failed!")
+        print("❌ Issues detected - needs investigation")
         return 1
 
 if __name__ == "__main__":
