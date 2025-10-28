@@ -568,22 +568,16 @@ class DifferenceSyncTester:
 
 def main():
     """Main test execution"""
-    try:
-        # Check if PIL is available for image creation
-        from PIL import Image
-    except ImportError:
-        print("❌ PIL (Pillow) not available. Installing...")
-        os.system("pip install Pillow")
-        from PIL import Image
-    
-    tester = AdminSettingsAPITester()
+    tester = DifferenceSyncTester()
     success = tester.run_all_tests()
     
     if success:
-        print("\n🎉 All tests passed!")
+        print("\n🎉 All difference-based sync tests passed!")
+        print("✅ The new sync logic is working correctly - no more delete-recreate!")
         return 0
     else:
-        print("\n💥 Some tests failed!")
+        print("\n💥 Some difference-based sync tests failed!")
+        print("❌ Issues detected with the new sync logic - needs investigation")
         return 1
 
 if __name__ == "__main__":
