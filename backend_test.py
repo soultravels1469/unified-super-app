@@ -1649,12 +1649,13 @@ class VendorPaymentTrackingTester:
 
 def main():
     """Main test execution"""
-    tester = SaleCostTrackingTester()
+    tester = VendorPaymentTrackingTester()
     success = tester.run_all_tests()
     
     if success:
-        print("\n🎉 All Sale & Cost Tracking and Sync Logic tests passed!")
-        print("✅ The NEW Sale & Cost Tracking feature is working correctly!")
+        print("\n🎉 All Vendor Payment Tracking, Sale & Cost Tracking and Sync Logic tests passed!")
+        print("✅ The NEW Vendor Partial Payment Tracking feature is working correctly!")
+        print("✅ Ledger sync with reference_type='vendor_payment' functioning properly!")
         print("✅ Multi-vendor support and auto-expense sync functioning properly!")
         return 0
     else:
