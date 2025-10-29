@@ -1598,6 +1598,18 @@ class VendorPaymentTrackingTester:
         # Key findings summary
         print("\n🔍 KEY FINDINGS:")
         
+        # Vendor Payment Tracking findings
+        vendor_payment_tests = [r for r in self.test_results if any(keyword in r['test'] for keyword in ['Vendor Partial Payments', 'Vendor Payments', 'Vendor Cost', 'Mixed Payment'])]
+        vendor_payment_passed = sum(1 for r in vendor_payment_tests if r['success'])
+        
+        if vendor_payment_passed == len(vendor_payment_tests) and len(vendor_payment_tests) > 0:
+            print("✅ VENDOR PAYMENT TRACKING: Partial payment tracking working correctly")
+            print("✅ VENDOR LEDGER SYNC: Ledger entries created with correct reference_type='vendor_payment'")
+            print("✅ PAYMENT MODES: Bank Transfer and Cash payments handled properly")
+            print("✅ UPDATE/DELETE SYNC: Old ledgers deleted, new ones created correctly")
+        else:
+            print("❌ VENDOR PAYMENT TRACKING ISSUES DETECTED")
+        
         # Sale & Cost Tracking findings
         sale_cost_tests = [r for r in self.test_results if any(keyword in r['test'] for keyword in ['Revenue with Vendor Costs', 'Update Revenue Costs', 'Delete Revenue with Linked', 'Auto-Expense Sync'])]
         sale_cost_passed = sum(1 for r in sale_cost_tests if r['success'])
