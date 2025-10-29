@@ -545,7 +545,7 @@ class AccountingService:
                 await self.update_account_balance(account, credit_amount, 'debit')
         
         # Delete the ledger entries
-        await self.db.ledger.delete_many({
+        await self.db.ledgers.delete_many({
             'reference_type': 'vendor_payment',
             'reference_id': {'$regex': f'^{reference_prefix}'}
         })
