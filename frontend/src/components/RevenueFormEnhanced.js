@@ -131,7 +131,8 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
       payment_status: 'Done',
       pending_amount: 0,
       due_date: '',
-      notes: ''
+      notes: '',
+      vendor_payments: [] // For tracking vendor partial payments
     }]);
   };
 
