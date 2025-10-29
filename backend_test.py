@@ -18,7 +18,7 @@ BACKEND_URL = "https://voyage-books-1.preview.emergentagent.com/api"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-class SaleCostTrackingTester:
+class VendorPaymentTrackingTester:
     def __init__(self):
         self.base_url = BACKEND_URL
         self.token = None
