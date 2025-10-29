@@ -63,22 +63,11 @@ function TourPackages() {
             ℹ️ Entries are auto-generated from the Revenue module
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)} data-testid="add-package-button">
-          + Add Package
-        </button>
       </div>
-
-      {showForm && (
-        <RevenueForm
-          revenue={editingPackage}
-          onClose={handleFormClose}
-          defaultSource="Package"
-        />
-      )}
 
       {Object.keys(groupedPackages).length === 0 ? (
         <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-          No tour packages yet. Add your first package!
+          No tour packages yet. Packages are created automatically through the Revenue module.
         </div>
       ) : (
         Object.entries(groupedPackages).reverse().map(([month, items]) => (
