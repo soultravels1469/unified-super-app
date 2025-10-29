@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Sale & Cost Tracking with Multi-Vendor Support
-Tests NEW Sale & Cost Tracking feature with auto-expense sync functionality
-Also includes Difference-Based Sync Logic tests
+Backend API Testing for Vendor Partial Payment Tracking and Ledger Sync
+Tests NEW Vendor Partial Payment Tracking feature with comprehensive ledger sync
+Also includes Sale & Cost Tracking and Difference-Based Sync Logic tests
 """
 
 import requests
