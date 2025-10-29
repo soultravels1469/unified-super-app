@@ -7,7 +7,7 @@ import requests
 import json
 from PIL import Image
 
-BACKEND_URL = "https://voyage-books-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://budget-tracker-582.preview.emergentagent.com/api"
 
 def comprehensive_admin_settings_test():
     """Test complete admin settings workflow"""
@@ -163,7 +163,7 @@ def comprehensive_admin_settings_test():
     
     # 7. Test file accessibility
     for file_path in [logo_path, signature_path]:
-        file_url = f"https://voyage-books-1.preview.emergentagent.com{file_path}"
+        file_url = f"https://budget-tracker-582.preview.emergentagent.com{file_path}"
         file_response = requests.get(file_url)
         
         if file_response.status_code == 200:
