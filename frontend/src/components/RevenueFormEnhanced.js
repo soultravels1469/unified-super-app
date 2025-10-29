@@ -917,28 +917,6 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                         );
                       })()}
                     </div>
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem', color: '#ef4444' }}>Due Date</label>
-                          <input
-                            type="date"
-                            value={row.due_date || ''}
-                            onChange={(e) => updateCostRow(index, 'due_date', e.target.value)}
-                          />
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem' }}>Notes</label>
-                          <input
-                            type="text"
-                            value={row.notes || ''}
-                            onChange={(e) => updateCostRow(index, 'notes', e.target.value)}
-                            placeholder="Payment pending notes..."
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
