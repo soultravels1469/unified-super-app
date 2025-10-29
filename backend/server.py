@@ -605,6 +605,13 @@ async def delete_revenue(revenue_id: str):
     # Delete all linked expenses first
     await delete_linked_expenses(revenue_id)
     
+    # Delete vendor payment ledger entries
+    cost_details = existing.get('cost_price_details', [])
+    for cost_detail in cost_details:
+        detail_id = cost_detail.get('id')
+        if detail_id:
+            await accounting.delete_vendor_payment_ledger_entries(revenue_id, detail_id)
+    
     # Delete from revenues collection
     result = await db.revenues.delete_one({"id": revenue_id})
     
