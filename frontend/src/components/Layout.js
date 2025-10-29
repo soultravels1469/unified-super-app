@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet, Settings, Users, ChevronDown, Database, Building2, UsersIcon, ScrollText, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet, Settings, Users, ChevronDown, Database, Building2, UsersIcon, ScrollText, TrendingUp, Shield } from 'lucide-react';
 import { useState } from 'react';
 
 function Layout({ children, onLogout }) {
