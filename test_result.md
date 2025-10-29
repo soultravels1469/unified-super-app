@@ -296,7 +296,30 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Auto-expense sync working perfectly! Verified: (1) Expenses auto-created from cost_price_details with correct amounts and descriptions, (2) Expenses updated when cost details modified, (3) Expenses deleted when cost details removed, (4) No expenses created when auto_expense_sync disabled in admin settings, (5) Expenses created again when auto_expense_sync re-enabled. All linked_expense_id fields properly populated in cost_price_details. Complete expense lifecycle management verified."
 
+  - task: "Vendor Partial Payment Tracking and Ledger Sync"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py, /app/backend/accounting_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented complete vendor partial payment tracking system. Added 'vendor_payments' array support within cost_price_details. Created new functions in accounting_service.py: create_vendor_payment_ledger_entries() and delete_vendor_payment_ledger_entries(). Revenue CREATE now processes vendor payments and creates ledger entries (Debit: Vendor account, Credit: Bank/Cash). Revenue UPDATE compares old vs new vendor payments, deletes old ledgers and creates new ones. Revenue DELETE cleans up all vendor payment ledger entries. Payment modes supported: Cash, Bank Transfer, UPI, Cheque. Each payment creates double-entry ledger with reference_type='vendor_payment' and proper account balance updates."
+
 frontend:
+  - task: "Vendor Partial Payment UI in Revenue Form"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RevenueFormEnhanced.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Vendor payment breakdown UI already implemented in Revenue Form. Each cost row has expandable 'Vendor Payment Breakdown' section with: Payment status summary (Payable/Paid/Remaining/Status), Add payment button, Payment entries with amount/date/mode fields, Running total calculations, Visual indicators for Settled vs Pending status. Helper functions: addVendorPayment(), updateVendorPayment(), removeVendorPayment(), calculateVendorPaymentStatus(). UI working and fully functional."
   - task: "Admin Settings UI with 4 tabs"
     implemented: true
     working: true
