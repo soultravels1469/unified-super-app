@@ -94,6 +94,44 @@ class VendorPaymentTrackingTester:
             self.log_result("Get Expenses", False, f"Error: {str(e)}")
             return []
     
+    def create_vendor(self, vendor_name, vendor_type="Hotel"):
+        """Create a vendor"""
+        try:
+            vendor_data = {
+                "vendor_name": vendor_name,
+                "contact": "9876543210",
+                "vendor_type": vendor_type,
+                "bank_name": "Test Bank",
+                "bank_account_number": "1234567890",
+                "bank_ifsc": "TEST0001234"
+            }
+            
+            response = requests.post(f"{self.base_url}/vendors", json=vendor_data, headers=self.headers)
+            
+            if response.status_code == 200:
+                vendor = response.json()
+                self.log_result("Create Vendor", True, f"Created vendor: {vendor_name}")
+                return vendor.get('id')
+            else:
+                self.log_result("Create Vendor", False, f"Failed with status {response.status_code}", response.text)
+                return None
+        except Exception as e:
+            self.log_result("Create Vendor", False, f"Error: {str(e)}")
+            return None
+    
+    def get_bank_accounts(self):
+        """Get bank accounts list"""
+        try:
+            response = requests.get(f"{self.base_url}/bank-accounts", headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.log_result("Get Bank Accounts", False, f"Failed with status {response.status_code}", response.text)
+                return []
+        except Exception as e:
+            self.log_result("Get Bank Accounts", False, f"Error: {str(e)}")
+            return []
+    
     def get_revenue(self, revenue_id):
         """Get specific revenue by ID"""
         try:
