@@ -10,6 +10,7 @@ import Reports from '@/pages/Reports';
 import TourPackages from '@/pages/TourPackages';
 import Tickets from '@/pages/Tickets';
 import Visas from '@/pages/Visas';
+import Insurance from '@/pages/Insurance';
 import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import TrialBalance from '@/pages/TrialBalance';
 import CashBankBook from '@/pages/CashBankBook';
