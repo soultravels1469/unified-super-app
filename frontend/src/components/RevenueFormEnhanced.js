@@ -162,6 +162,7 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                 <option value="Visa">Visa</option>
                 <option value="Ticket">Ticket</option>
                 <option value="Package">Package</option>
+                <option value="Insurance">Insurance</option>
               </select>
             </div>
 
