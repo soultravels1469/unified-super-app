@@ -36,10 +36,19 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     if (revenue) {
       setFormData(revenue);
       setCostRows(revenue.cost_price_details || []);
-      setPartialPayments(revenue.partial_payments || []);
-      setShowPartialPayments((revenue.partial_payments || []).length > 0);
+      const payments = revenue.partial_payments || [];
+      setPartialPayments(payments);
+      // Keep expanded if there are any payments, and force open if > 1
+      setShowPartialPayments(payments.length > 0);
     }
   }, [revenue]);
+
+  // Auto-expand partial payments if count > 1
+  useEffect(() => {
+    if (partialPayments.length > 1) {
+      setShowPartialPayments(true);
+    }
+  }, [partialPayments.length]);
 
   const fetchVendors = async () => {
     try {
