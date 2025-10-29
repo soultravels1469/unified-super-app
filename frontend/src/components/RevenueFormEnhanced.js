@@ -375,12 +375,17 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
           {formData.pending_amount > 0 && (
             <div style={{ marginBottom: '2rem' }}>
               <div 
-                onClick={() => setShowPartialPayments(!showPartialPayments)}
+                onClick={() => {
+                  // Only allow collapse if there's 1 or 0 payments
+                  if (partialPayments.length <= 1) {
+                    setShowPartialPayments(!showPartialPayments);
+                  }
+                }}
                 style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  cursor: 'pointer',
+                  cursor: partialPayments.length <= 1 ? 'pointer' : 'default',
                   padding: '1rem',
                   background: '#f0f9ff',
                   borderRadius: '8px',
@@ -389,8 +394,9 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
               >
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
                   Partial Payments ({partialPayments.length})
+                  {partialPayments.length > 1 && <span style={{ fontSize: '0.875rem', fontWeight: 400, marginLeft: '0.5rem', color: '#64748b' }}>(Permanently Expanded)</span>}
                 </h3>
-                {showPartialPayments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                {partialPayments.length <= 1 && (showPartialPayments ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
               </div>
 
               {showPartialPayments && (
@@ -405,29 +411,139 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                     Add Partial Payment
                   </button>
 
-                  {partialPayments.map((payment, index) => (
-                    <div key={payment.id} style={{ 
-                      marginBottom: '1rem',
-                      padding: '1rem',
-                      background: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb'
-                    }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr auto', gap: '0.75rem', alignItems: 'end' }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem' }}>Date</label>
-                          <input
-                            type="date"
-                            value={payment.date}
-                            onChange={(e) => updatePartialPayment(index, 'date', e.target.value)}
-                            required
-                          />
-                        </div>
+                  {partialPayments.length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>Payment History:</h4>
+                      {partialPayments.map((payment, index) => {
+                        // Calculate running balance
+                        const previousPayments = partialPayments.slice(0, index + 1);
+                        const totalPaidSoFar = previousPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                        const remainingBalance = parseFloat(formData.sale_price || 0) - totalPaidSoFar;
+                        
+                        return (
+                          <div key={payment.id} style={{ 
+                            marginBottom: '1rem',
+                            padding: '1rem',
+                            background: '#f9fafb',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            {/* Payment Summary Line */}
+                            <div style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: 600, 
+                              marginBottom: '0.75rem',
+                              color: '#1e293b',
+                              padding: '0.5rem',
+                              background: '#e0f2fe',
+                              borderRadius: '6px'
+                            }}>
+                              #{index + 1} ₹{(parseFloat(payment.amount) || 0).toLocaleString()} via {payment.payment_mode} - {payment.date} | Remaining: ₹{remainingBalance.toLocaleString()}
+                            </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem' }}>Amount (₹)</label>
-                          <input
-                            type="number"
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr auto', gap: '0.75rem', alignItems: 'end' }}>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label style={{ fontSize: '0.875rem' }}>Date</label>
+                                <input
+                                  type="date"
+                                  value={payment.date}
+                                  onChange={(e) => updatePartialPayment(index, 'date', e.target.value)}
+                                  required
+                                />
+                              </div>
+
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label style={{ fontSize: '0.875rem' }}>Amount (₹)</label>
+                                <input
+                                  type="number"
+                                  value={payment.amount}
+                                  onChange={(e) => updatePartialPayment(index, 'amount', parseFloat(e.target.value) || 0)}
+                                  min="0"
+                                  step="0.01"
+                                  required
+                                />
+                              </div>
+
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label style={{ fontSize: '0.875rem' }}>Bank</label>
+                                <select
+                                  value={payment.bank_name}
+                                  onChange={(e) => updatePartialPayment(index, 'bank_name', e.target.value)}
+                                >
+                                  <option value="">Select Bank</option>
+                                  {bankAccounts.map(bank => (
+                                    <option key={bank.id} value={bank.bank_name}>{bank.bank_name}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label style={{ fontSize: '0.875rem' }}>Payment Mode</label>
+                                <select
+                                  value={payment.payment_mode}
+                                  onChange={(e) => updatePartialPayment(index, 'payment_mode', e.target.value)}
+                                >
+                                  <option value="Cash">Cash</option>
+                                  <option value="Bank Transfer">Bank Transfer</option>
+                                  <option value="UPI">UPI</option>
+                                  <option value="Cheque">Cheque</option>
+                                </select>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removePartialPayment(index)}
+                                style={{ 
+                                  border: 'none',
+                                  background: '#ef4444',
+                                  color: 'white',
+                                  padding: '0.5rem',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Running Total Summary */}
+                  <div style={{ 
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: '#f0fdf4',
+                    borderRadius: '8px',
+                    border: '1px solid #86efac'
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontWeight: 600 }}>
+                      <div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Received</div>
+                        <div style={{ fontSize: '1.1rem', color: '#10b981' }}>
+                          ₹{partialPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Balance Remaining</div>
+                        <div style={{ fontSize: '1.1rem', color: '#ef4444' }}>
+                          ₹{(parseFloat(formData.sale_price || 0) - partialPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)).toLocaleString()}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Payment Count</div>
+                        <div style={{ fontSize: '1.1rem', color: '#6366f1' }}>
+                          {partialPayments.length} payments
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
                             value={payment.amount}
                             onChange={(e) => updatePartialPayment(index, 'amount', parseFloat(e.target.value) || 0)}
                             min="0"
