@@ -91,9 +91,13 @@ function App() {
                     <Route path="/accounting/cash-bank" element={<CashBankBook />} />
                     <Route path="/accounting/gst" element={<GSTSummary />} />
                     <Route path="/accounting/invoices" element={<InvoiceGenerator />} />
+                    <Route path="/accounting/bank-accounts" element={<BankAccounts />} />
+                    <Route path="/accounting/vendors" element={<Vendors />} />
+                    <Route path="/accounting/vendor-report" element={<VendorReport />} />
                     <Route path="/admin/settings" element={<AdminSettings />} />
                     <Route path="/admin/users" element={<UserManagement />} />
                     <Route path="/admin/data" element={<DataManagement />} />
+                    <Route path="/admin/logs" element={<ActivityLogs />} />
                   </Routes>
                 </Layout>
               ) : (
