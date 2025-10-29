@@ -516,7 +516,7 @@ class AccountingService:
             }
             
             # Insert both ledger entries
-            await self.db.ledger.insert_many([vendor_ledger, payment_ledger])
+            await self.db.ledgers.insert_many([vendor_ledger, payment_ledger])
             
             # Update account balances
             await self.update_account_balance(f"Vendor - {vendor_name}", amount, 'debit')
