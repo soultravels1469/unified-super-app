@@ -6,14 +6,11 @@ function Layout({ children, onLogout }) {
   const username = localStorage.getItem('username');
   const role = localStorage.getItem('role');
   const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const [showServicesMenu, setShowServicesMenu] = useState(false);
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
     { to: '/revenue', icon: DollarSign, label: 'Revenue', section: 'main', adminOnly: false },
-    { to: '/packages', icon: Package, label: 'Tour Packages', section: 'main', adminOnly: false },
-    { to: '/tickets', icon: Plane, label: 'Tickets', section: 'main', adminOnly: false },
-    { to: '/visas', icon: FileCheck, label: 'Visas', section: 'main', adminOnly: false },
-    { to: '/insurance', icon: Shield, label: 'Insurance', section: 'main', adminOnly: false },
     { to: '/expenses', icon: Receipt, label: 'Expenses', section: 'main', adminOnly: false },
     { to: '/pending', icon: Clock, label: 'Pending', section: 'main', adminOnly: false },
     { to: '/reports', icon: FileText, label: 'Reports', section: 'main' },
@@ -25,6 +22,13 @@ function Layout({ children, onLogout }) {
     { to: '/accounting/bank-accounts', icon: Building2, label: 'Bank Accounts', section: 'accounting' },
     { to: '/accounting/vendors', icon: UsersIcon, label: 'Vendors', section: 'accounting' },
     { to: '/accounting/vendor-report', icon: TrendingUp, label: 'Vendor Report', section: 'accounting' },
+  ];
+
+  const servicesItems = [
+    { to: '/packages', icon: Package, label: 'Tour Packages' },
+    { to: '/tickets', icon: Plane, label: 'Tickets' },
+    { to: '/visas', icon: FileCheck, label: 'Visas' },
+    { to: '/insurance', icon: Shield, label: 'Insurance' },
   ];
 
   const adminMenuItems = [
