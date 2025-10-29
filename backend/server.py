@@ -517,6 +517,10 @@ async def create_revenue(revenue: RevenueCreate):
     if partial_payments:
         await create_partial_payment_ledgers(revenue_obj.id, revenue_obj.client_name, partial_payments)
     
+    # Process vendor partial payments
+    if cost_price_details:
+        await process_vendor_payments(revenue_obj.id, cost_price_details)
+    
     # Create accounting ledger entry if revenue is received/completed
     if revenue_obj.status in ['Received', 'Completed'] and revenue_obj.received_amount > 0:
         await accounting.create_revenue_ledger_entry(doc)
