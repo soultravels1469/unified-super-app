@@ -159,6 +159,69 @@ class ExpenseUpdate(BaseModel):
     linked_revenue_id: Optional[str] = None
     linked_cost_detail_id: Optional[str] = None
 
+# ===== BANK ACCOUNTS MODELS =====
+class BankAccountModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    bank_name: str
+    account_number: str
+    ifsc_code: str
+    holder_name: str
+    account_type: str  # Savings/Current
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BankAccountCreate(BaseModel):
+    bank_name: str
+    account_number: str
+    ifsc_code: str
+    holder_name: str
+    account_type: str
+
+class BankAccountUpdate(BaseModel):
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    holder_name: Optional[str] = None
+    account_type: Optional[str] = None
+
+# ===== VENDOR MODELS =====
+class VendorModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_name: str
+    contact: Optional[str] = ""
+    vendor_type: str  # Hotel/Flight/Land/Other
+    bank_name: Optional[str] = ""
+    bank_account_number: Optional[str] = ""
+    bank_ifsc: Optional[str] = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class VendorCreate(BaseModel):
+    vendor_name: str
+    contact: Optional[str] = ""
+    vendor_type: str
+    bank_name: Optional[str] = ""
+    bank_account_number: Optional[str] = ""
+    bank_ifsc: Optional[str] = ""
+
+class VendorUpdate(BaseModel):
+    vendor_name: Optional[str] = None
+    contact: Optional[str] = None
+    vendor_type: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+
+# ===== ACTIVITY LOG MODELS =====
+class ActivityLog(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    action: str  # CREATE/UPDATE/DELETE
+    module: str  # Revenue/Expense/Vendor/Bank
+    description: str
+    user: str = "admin"
+
 class DashboardSummary(BaseModel):
     total_revenue: float
     total_expenses: float
