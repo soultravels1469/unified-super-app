@@ -719,4 +719,4 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
   );
 }
 
-export default RevenueFormEnhancedFinal;
+export default RevenueFormEnhanced;
