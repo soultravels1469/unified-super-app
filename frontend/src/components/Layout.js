@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet, Settings, Users, ChevronDown, Database } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Receipt, Clock, FileText, LogOut, Package, Plane, FileCheck, Book, Scale, Wallet, ReceiptText, FileSpreadsheet, Settings, Users, ChevronDown, Database, Building2, UsersIcon, ScrollText, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
 function Layout({ children, onLogout }) {
@@ -21,12 +21,16 @@ function Layout({ children, onLogout }) {
     { to: '/accounting/cash-bank', icon: Wallet, label: 'Cash/Bank Book', section: 'accounting' },
     { to: '/accounting/gst', icon: ReceiptText, label: 'GST Summary', section: 'accounting' },
     { to: '/accounting/invoices', icon: FileSpreadsheet, label: 'Invoices', section: 'accounting', adminOnly: false },
+    { to: '/accounting/bank-accounts', icon: Building2, label: 'Bank Accounts', section: 'accounting' },
+    { to: '/accounting/vendors', icon: UsersIcon, label: 'Vendors', section: 'accounting' },
+    { to: '/accounting/vendor-report', icon: TrendingUp, label: 'Vendor Report', section: 'accounting' },
   ];
 
   const adminMenuItems = [
     { to: '/admin/settings', icon: Settings, label: 'Settings' },
     { to: '/admin/users', icon: Users, label: 'User Management' },
     { to: '/admin/data', icon: Database, label: 'Data Management' },
+    { to: '/admin/logs', icon: ScrollText, label: 'Activity Logs' },
   ];
 
   return (
