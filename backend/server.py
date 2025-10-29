@@ -829,6 +829,154 @@ async def create_manual_journal(entry_data: Dict[str, Any]):
     
     return {"message": "Journal entry created successfully", "entry_id": entry_id}
 
+# ===== ACTIVITY LOG HELPER =====
+async def log_activity(action: str, module: str, description: str, user: str = "admin"):
+    """Helper function to log all activities"""
+    log = ActivityLog(action=action, module=module, description=description, user=user)
+    log_dict = log.model_dump()
+    log_dict['timestamp'] = log_dict['timestamp'].isoformat()
+    await db.activity_logs.insert_one(log_dict)
+
+# ===== BANK ACCOUNTS ENDPOINTS =====
+
+@api_router.get("/bank-accounts", response_model=List[BankAccountModel])
+async def get_bank_accounts():
+    accounts = await db.bank_accounts.find({}, {"_id": 0}).to_list(100)
+    for acc in accounts:
+        if isinstance(acc.get('created_at'), str):
+            acc['created_at'] = datetime.fromisoformat(acc['created_at'])
+    return accounts
+
+@api_router.post("/bank-accounts", response_model=BankAccountModel)
+async def create_bank_account(account: BankAccountCreate):
+    account_obj = BankAccountModel(**account.model_dump())
+    doc = account_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.bank_accounts.insert_one(doc)
+    await log_activity("CREATE", "Bank Account", f"Created bank account: {account.bank_name}")
+    return account_obj
+
+@api_router.put("/bank-accounts/{account_id}", response_model=BankAccountModel)
+async def update_bank_account(account_id: str, update: BankAccountUpdate):
+    existing = await db.bank_accounts.find_one({"id": account_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    if update_data:
+        await db.bank_accounts.update_one({"id": account_id}, {"$set": update_data})
+    
+    updated = await db.bank_accounts.find_one({"id": account_id}, {"_id": 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    await log_activity("UPDATE", "Bank Account", f"Updated bank account: {updated['bank_name']}")
+    return BankAccountModel(**updated)
+
+@api_router.delete("/bank-accounts/{account_id}")
+async def delete_bank_account(account_id: str):
+    existing = await db.bank_accounts.find_one({"id": account_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    
+    await db.bank_accounts.delete_one({"id": account_id})
+    await log_activity("DELETE", "Bank Account", f"Deleted bank account: {existing['bank_name']}")
+    return {"message": "Bank account deleted successfully"}
+
+# ===== VENDOR ENDPOINTS =====
+
+@api_router.get("/vendors", response_model=List[VendorModel])
+async def get_vendors():
+    vendors = await db.vendors.find({}, {"_id": 0}).to_list(100)
+    for vendor in vendors:
+        if isinstance(vendor.get('created_at'), str):
+            vendor['created_at'] = datetime.fromisoformat(vendor['created_at'])
+    return vendors
+
+@api_router.post("/vendors", response_model=VendorModel)
+async def create_vendor(vendor: VendorCreate):
+    vendor_obj = VendorModel(**vendor.model_dump())
+    doc = vendor_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.vendors.insert_one(doc)
+    await log_activity("CREATE", "Vendor", f"Created vendor: {vendor.vendor_name}")
+    return vendor_obj
+
+@api_router.put("/vendors/{vendor_id}", response_model=VendorModel)
+async def update_vendor(vendor_id: str, update: VendorUpdate):
+    existing = await db.vendors.find_one({"id": vendor_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    if update_data:
+        await db.vendors.update_one({"id": vendor_id}, {"$set": update_data})
+    
+    updated = await db.vendors.find_one({"id": vendor_id}, {"_id": 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    await log_activity("UPDATE", "Vendor", f"Updated vendor: {updated['vendor_name']}")
+    return VendorModel(**updated)
+
+@api_router.delete("/vendors/{vendor_id}")
+async def delete_vendor(vendor_id: str):
+    existing = await db.vendors.find_one({"id": vendor_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    await db.vendors.delete_one({"id": vendor_id})
+    await log_activity("DELETE", "Vendor", f"Deleted vendor: {existing['vendor_name']}")
+    return {"message": "Vendor deleted successfully"}
+
+# ===== ACTIVITY LOGS ENDPOINT =====
+
+@api_router.get("/activity-logs")
+async def get_activity_logs(limit: int = 100):
+    logs = await db.activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(limit)
+    return logs
+
+# ===== VENDOR BUSINESS REPORT =====
+
+@api_router.get("/reports/vendor-business")
+async def get_vendor_business_report(period: str = "monthly"):
+    """Get business done with each vendor"""
+    # Aggregate from expenses with linked_revenue_id
+    pipeline = [
+        {
+            "$match": {
+                "linked_revenue_id": {"$exists": True, "$ne": None}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$description",
+                "total_amount": {"$sum": "$amount"},
+                "transaction_count": {"$sum": 1}
+            }
+        },
+        {
+            "$sort": {"total_amount": -1}
+        }
+    ]
+    
+    results = await db.expenses.aggregate(pipeline).to_list(100)
+    
+    # Parse vendor names from description
+    vendor_report = []
+    for result in results:
+        desc = result['_id']
+        # Extract vendor name from "Auto-generated from Revenue - Client - Vendor: XXX"
+        if "Vendor:" in desc:
+            vendor_name = desc.split("Vendor:")[-1].strip()
+            vendor_report.append({
+                "vendor_name": vendor_name,
+                "total_business": result['total_amount'],
+                "transaction_count": result['transaction_count']
+            })
+    
+    return vendor_report
+
 # ===== ADMIN SETTINGS ENDPOINTS =====
 
 # Pydantic models for settings
