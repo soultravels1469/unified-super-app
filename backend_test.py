@@ -188,6 +188,506 @@ class VendorPaymentTrackingTester:
             self.log_result("Delete Revenue", False, f"Error: {str(e)}")
             return False
     
+    # ===== VENDOR PARTIAL PAYMENT TRACKING TESTS =====
+    
+    def test_create_revenue_with_vendor_partial_payments(self):
+        """Test Scenario 1: CREATE Revenue with Vendor Partial Payments"""
+        try:
+            print("\n🔍 SCENARIO 1: CREATE Revenue with Vendor Partial Payments")
+            
+            # First create a vendor if needed
+            vendor_id = self.create_vendor("Hotel ABC", "Hotel")
+            
+            # Get bank accounts list
+            bank_accounts = self.get_bank_accounts()
+            self.log_result("Get Bank Accounts", True, f"Found {len(bank_accounts)} bank accounts")
+            
+            # Create revenue with cost details including vendor payments
+            revenue_data = {
+                "date": "2025-01-29",
+                "client_name": "Adventure Tours Client",
+                "source": "Package",
+                "payment_mode": "Bank Transfer",
+                "sale_price": 100000,
+                "received_amount": 100000,
+                "pending_amount": 0,
+                "status": "Completed",
+                "cost_price_details": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Hotel ABC",
+                        "category": "Hotel",
+                        "amount": 30000,
+                        "payment_status": "Pending",
+                        "vendor_payments": [
+                            {
+                                "id": "vp_1",
+                                "amount": 10000,
+                                "date": "2025-01-29",
+                                "payment_mode": "Bank Transfer"
+                            },
+                            {
+                                "id": "vp_2", 
+                                "amount": 5000,
+                                "date": "2025-01-30",
+                                "payment_mode": "Cash"
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+            response = requests.post(f"{self.base_url}/revenue", json=revenue_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Revenue with Vendor Payments", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            revenue_response = response.json()
+            revenue_id = revenue_response.get('id')
+            
+            # Verify response has revenue created with cost_price_details preserved
+            cost_details = revenue_response.get('cost_price_details', [])
+            if len(cost_details) == 1 and cost_details[0].get('vendor_payments'):
+                self.log_result("Revenue Created with Vendor Payments", True, f"Revenue created with vendor payments preserved")
+            else:
+                self.log_result("Revenue Created with Vendor Payments", False, "Vendor payments not preserved in response")
+                return False
+            
+            # Check Ledger Entries - verify vendor payment ledgers created
+            time.sleep(2)  # Allow for ledger processing
+            ledger_entries = self.get_ledger_entries()
+            vendor_payment_entries = [e for e in ledger_entries if e.get('reference_type') == 'vendor_payment']
+            
+            if len(vendor_payment_entries) == 4:  # 2 payments × 2 entries each (debit + credit)
+                self.log_result("Vendor Payment Ledger Entries", True, f"Created {len(vendor_payment_entries)} vendor payment ledger entries")
+            else:
+                self.log_result("Vendor Payment Ledger Entries", False, f"Expected 4 entries, got {len(vendor_payment_entries)}")
+                return False
+            
+            # Verify ledger entry details
+            vendor_debits = [e for e in vendor_payment_entries if e.get('account') == 'Vendor - Hotel ABC' and e.get('debit', 0) > 0]
+            bank_credits = [e for e in vendor_payment_entries if e.get('account') == 'Bank - Current Account' and e.get('credit', 0) > 0]
+            cash_credits = [e for e in vendor_payment_entries if e.get('account') == 'Cash' and e.get('credit', 0) > 0]
+            
+            # Verify amounts
+            total_vendor_debit = sum(e.get('debit', 0) for e in vendor_debits)
+            total_bank_credit = sum(e.get('credit', 0) for e in bank_credits)
+            total_cash_credit = sum(e.get('credit', 0) for e in cash_credits)
+            
+            if abs(total_vendor_debit - 15000) < 0.01:  # 10000 + 5000
+                self.log_result("Vendor Debit Amount", True, f"Correct vendor debit total: ₹{total_vendor_debit}")
+            else:
+                self.log_result("Vendor Debit Amount", False, f"Expected ₹15000, got ₹{total_vendor_debit}")
+                return False
+            
+            if abs(total_bank_credit - 10000) < 0.01:
+                self.log_result("Bank Credit Amount", True, f"Correct bank credit: ₹{total_bank_credit}")
+            else:
+                self.log_result("Bank Credit Amount", False, f"Expected ₹10000, got ₹{total_bank_credit}")
+                return False
+            
+            if abs(total_cash_credit - 5000) < 0.01:
+                self.log_result("Cash Credit Amount", True, f"Correct cash credit: ₹{total_cash_credit}")
+            else:
+                self.log_result("Cash Credit Amount", False, f"Expected ₹5000, got ₹{total_cash_credit}")
+                return False
+            
+            # Verify reference_id format: "{revenue_id}_{cost_detail_id}_{payment_id}"
+            reference_ids = [e.get('reference_id') for e in vendor_payment_entries]
+            expected_refs = [f"{revenue_id}_{cost_details[0]['id']}_vp_1", f"{revenue_id}_{cost_details[0]['id']}_vp_2"]
+            
+            valid_refs = all(any(ref.endswith(expected) for expected in ['_vp_1', '_vp_2']) for ref in reference_ids)
+            if valid_refs:
+                self.log_result("Reference ID Format", True, "Reference IDs follow correct format")
+            else:
+                self.log_result("Reference ID Format", False, f"Invalid reference ID format: {reference_ids}")
+                return False
+            
+            self.log_result("Create Revenue with Vendor Partial Payments", True, "✅ Revenue created with correct vendor payment ledger entries")
+            return revenue_id
+            
+        except Exception as e:
+            self.log_result("Create Revenue with Vendor Partial Payments", False, f"Error: {str(e)}")
+            return False
+    
+    def test_update_revenue_modify_vendor_payments(self, revenue_id):
+        """Test Scenario 2: UPDATE Revenue - Modify Vendor Payments"""
+        try:
+            print("\n🔍 SCENARIO 2: UPDATE Revenue - Modify Vendor Payments")
+            
+            if not revenue_id:
+                self.log_result("Update Revenue Vendor Payments", False, "No revenue ID provided")
+                return False
+            
+            # Get current revenue state
+            current_revenue = self.get_revenue(revenue_id)
+            if not current_revenue:
+                self.log_result("Get Current Revenue", False, "Could not fetch current revenue")
+                return False
+            
+            cost_details = current_revenue.get('cost_price_details', [])
+            if not cost_details:
+                self.log_result("Get Cost Details", False, "No cost details found")
+                return False
+            
+            # Modify vendor payments: change first payment from ₹10,000 to ₹15,000, remove second payment, add new payment ₹8,000
+            updated_cost_details = []
+            for detail in cost_details:
+                if detail.get('vendor_name') == 'Hotel ABC':
+                    detail['vendor_payments'] = [
+                        {
+                            "id": "vp_1",
+                            "amount": 15000,  # Changed from 10000
+                            "date": "2025-01-29",
+                            "payment_mode": "Bank Transfer"
+                        },
+                        # Removed vp_2 (5000)
+                        {
+                            "id": "vp_3",  # New payment
+                            "amount": 8000,
+                            "date": "2025-01-31",
+                            "payment_mode": "Bank Transfer"
+                        }
+                    ]
+                updated_cost_details.append(detail)
+            
+            # Update revenue
+            update_data = {
+                "cost_price_details": updated_cost_details
+            }
+            
+            response = requests.put(f"{self.base_url}/revenue/{revenue_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Update Revenue Vendor Payments", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            # Check Ledger Entries - old entries should be deleted, new ones created
+            time.sleep(2)  # Allow for processing
+            ledger_entries = self.get_ledger_entries()
+            vendor_payment_entries = [e for e in ledger_entries if e.get('reference_type') == 'vendor_payment']
+            
+            # Should have 4 entries for the updated payments (2 payments × 2 entries each)
+            if len(vendor_payment_entries) == 4:
+                self.log_result("Updated Vendor Payment Entries", True, f"Found {len(vendor_payment_entries)} updated vendor payment entries")
+            else:
+                self.log_result("Updated Vendor Payment Entries", False, f"Expected 4 entries, got {len(vendor_payment_entries)}")
+                return False
+            
+            # Verify new amounts: Total debits to "Vendor - Hotel ABC": ₹23,000 (15,000 + 8,000)
+            vendor_debits = [e for e in vendor_payment_entries if e.get('account') == 'Vendor - Hotel ABC' and e.get('debit', 0) > 0]
+            total_vendor_debit = sum(e.get('debit', 0) for e in vendor_debits)
+            
+            if abs(total_vendor_debit - 23000) < 0.01:  # 15000 + 8000
+                self.log_result("Updated Vendor Debit Total", True, f"Correct updated vendor debit: ₹{total_vendor_debit}")
+            else:
+                self.log_result("Updated Vendor Debit Total", False, f"Expected ₹23000, got ₹{total_vendor_debit}")
+                return False
+            
+            # Verify bank credits: ₹23,000 (all payments via bank)
+            bank_credits = [e for e in vendor_payment_entries if e.get('account') == 'Bank - Current Account' and e.get('credit', 0) > 0]
+            total_bank_credit = sum(e.get('credit', 0) for e in bank_credits)
+            
+            if abs(total_bank_credit - 23000) < 0.01:
+                self.log_result("Updated Bank Credit Total", True, f"Correct updated bank credit: ₹{total_bank_credit}")
+            else:
+                self.log_result("Updated Bank Credit Total", False, f"Expected ₹23000, got ₹{total_bank_credit}")
+                return False
+            
+            # Verify no cash entries remain (since we removed the cash payment)
+            cash_entries = [e for e in vendor_payment_entries if e.get('account') == 'Cash']
+            if len(cash_entries) == 0:
+                self.log_result("Cash Entries Removed", True, "Cash payment entries correctly removed")
+            else:
+                self.log_result("Cash Entries Removed", False, f"Found {len(cash_entries)} unexpected cash entries")
+                return False
+            
+            self.log_result("Update Revenue Modify Vendor Payments", True, "✅ Vendor payments updated correctly with proper ledger sync")
+            return True
+            
+        except Exception as e:
+            self.log_result("Update Revenue Modify Vendor Payments", False, f"Error: {str(e)}")
+            return False
+    
+    def test_update_revenue_add_new_vendor_cost(self, revenue_id):
+        """Test Scenario 3: UPDATE Revenue - Add New Vendor Cost with Payments"""
+        try:
+            print("\n🔍 SCENARIO 3: UPDATE Revenue - Add New Vendor Cost with Payments")
+            
+            if not revenue_id:
+                self.log_result("Add New Vendor Cost", False, "No revenue ID provided")
+                return False
+            
+            # Get current revenue
+            current_revenue = self.get_revenue(revenue_id)
+            if not current_revenue:
+                self.log_result("Get Current Revenue for Add", False, "Could not fetch current revenue")
+                return False
+            
+            # Add new cost detail with vendor payments
+            current_cost_details = current_revenue.get('cost_price_details', [])
+            new_cost_detail = {
+                "id": str(uuid.uuid4()),
+                "vendor_name": "Airlines XYZ",
+                "category": "Flight",
+                "amount": 50000,
+                "payment_status": "Done",
+                "vendor_payments": [
+                    {
+                        "id": "vp_airlines_1",
+                        "amount": 50000,
+                        "date": "2025-01-29",
+                        "payment_mode": "Bank Transfer"
+                    }
+                ]
+            }
+            
+            updated_cost_details = current_cost_details + [new_cost_detail]
+            
+            # Update revenue
+            update_data = {
+                "cost_price_details": updated_cost_details
+            }
+            
+            response = requests.put(f"{self.base_url}/revenue/{revenue_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Add New Vendor Cost", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            # Check new vendor payment ledgers for Airlines XYZ
+            time.sleep(2)  # Allow for processing
+            ledger_entries = self.get_ledger_entries()
+            vendor_payment_entries = [e for e in ledger_entries if e.get('reference_type') == 'vendor_payment']
+            
+            # Should now have entries for both Hotel ABC (4 entries) and Airlines XYZ (2 entries) = 6 total
+            if len(vendor_payment_entries) >= 6:
+                self.log_result("Total Vendor Payment Entries", True, f"Found {len(vendor_payment_entries)} total vendor payment entries")
+            else:
+                self.log_result("Total Vendor Payment Entries", False, f"Expected at least 6 entries, got {len(vendor_payment_entries)}")
+                return False
+            
+            # Verify Airlines XYZ entries
+            airlines_entries = [e for e in vendor_payment_entries if 'Airlines XYZ' in e.get('account', '')]
+            if len(airlines_entries) == 1:  # Should be 1 debit entry for Airlines XYZ
+                airlines_debit = airlines_entries[0]
+                if abs(airlines_debit.get('debit', 0) - 50000) < 0.01:
+                    self.log_result("Airlines Debit Entry", True, f"Correct Airlines XYZ debit: ₹{airlines_debit.get('debit')}")
+                else:
+                    self.log_result("Airlines Debit Entry", False, f"Expected ₹50000, got ₹{airlines_debit.get('debit')}")
+                    return False
+            else:
+                self.log_result("Airlines Debit Entry", False, f"Expected 1 Airlines debit entry, got {len(airlines_entries)}")
+                return False
+            
+            # Verify corresponding bank credit for Airlines payment
+            airlines_bank_credits = [e for e in vendor_payment_entries 
+                                   if e.get('account') == 'Bank - Current Account' 
+                                   and e.get('credit', 0) == 50000
+                                   and 'Airlines XYZ' in e.get('description', '')]
+            
+            if len(airlines_bank_credits) == 1:
+                self.log_result("Airlines Bank Credit", True, f"Correct Airlines bank credit: ₹{airlines_bank_credits[0].get('credit')}")
+            else:
+                self.log_result("Airlines Bank Credit", False, f"Expected 1 Airlines bank credit, got {len(airlines_bank_credits)}")
+                return False
+            
+            self.log_result("Add New Vendor Cost with Payments", True, "✅ New vendor cost added with correct ledger entries")
+            return True
+            
+        except Exception as e:
+            self.log_result("Add New Vendor Cost with Payments", False, f"Error: {str(e)}")
+            return False
+    
+    def test_delete_revenue_with_vendor_payments(self, revenue_id):
+        """Test Scenario 4: DELETE Revenue with Vendor Payments"""
+        try:
+            print("\n🔍 SCENARIO 4: DELETE Revenue with Vendor Payments")
+            
+            if not revenue_id:
+                self.log_result("Delete Revenue with Vendor Payments", False, "No revenue ID provided")
+                return False
+            
+            # Get vendor payment entries before deletion
+            ledger_before = self.get_ledger_entries()
+            vendor_payment_before = [e for e in ledger_before if e.get('reference_type') == 'vendor_payment']
+            
+            self.log_result("Vendor Payment Entries Before Delete", True, f"Found {len(vendor_payment_before)} vendor payment entries before delete")
+            
+            # Delete revenue
+            if not self.delete_revenue(revenue_id):
+                return False
+            
+            # Verify cleanup - all ledger entries with reference_type='vendor_payment' should be deleted
+            time.sleep(2)  # Allow for cleanup
+            ledger_after = self.get_ledger_entries()
+            vendor_payment_after = [e for e in ledger_after if e.get('reference_type') == 'vendor_payment']
+            
+            if len(vendor_payment_after) == 0:
+                self.log_result("Vendor Payment Cleanup", True, "All vendor payment ledger entries deleted")
+            else:
+                self.log_result("Vendor Payment Cleanup", False, f"{len(vendor_payment_after)} vendor payment entries still exist")
+                return False
+            
+            # Verify no orphaned ledger entries remain
+            revenue_related_entries = [e for e in ledger_after if revenue_id in e.get('reference_id', '')]
+            if len(revenue_related_entries) == 0:
+                self.log_result("No Orphaned Entries", True, "No orphaned ledger entries remain")
+            else:
+                self.log_result("No Orphaned Entries", False, f"{len(revenue_related_entries)} orphaned entries found")
+                return False
+            
+            self.log_result("Delete Revenue with Vendor Payments", True, "✅ Revenue deleted with complete vendor payment cleanup")
+            return True
+            
+        except Exception as e:
+            self.log_result("Delete Revenue with Vendor Payments", False, f"Error: {str(e)}")
+            return False
+    
+    def test_multiple_cost_details_mixed_payment_status(self):
+        """Test Scenario 5: Multiple Cost Details with Mixed Payment Status"""
+        try:
+            print("\n🔍 SCENARIO 5: Multiple Cost Details with Mixed Payment Status")
+            
+            # Create revenue with 2 cost details: one Done, one Pending with partial payments
+            revenue_data = {
+                "date": "2025-01-29",
+                "client_name": "Mixed Payment Client",
+                "source": "Package",
+                "payment_mode": "Bank Transfer",
+                "sale_price": 80000,
+                "received_amount": 80000,
+                "pending_amount": 0,
+                "status": "Completed",
+                "cost_price_details": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Hotel Complete",
+                        "category": "Hotel",
+                        "amount": 20000,
+                        "payment_status": "Done",
+                        "vendor_payments": [
+                            {
+                                "id": "vp_complete_1",
+                                "amount": 20000,
+                                "date": "2025-01-29",
+                                "payment_mode": "Bank Transfer"
+                            }
+                        ]
+                    },
+                    {
+                        "id": str(uuid.uuid4()),
+                        "vendor_name": "Transport Partial",
+                        "category": "Land",
+                        "amount": 30000,
+                        "payment_status": "Pending",
+                        "vendor_payments": [
+                            {
+                                "id": "vp_partial_1",
+                                "amount": 10000,
+                                "date": "2025-01-29",
+                                "payment_mode": "Cash"
+                            },
+                            {
+                                "id": "vp_partial_2",
+                                "amount": 5000,
+                                "date": "2025-01-30",
+                                "payment_mode": "Bank Transfer"
+                            }
+                            # ₹15,000 remaining (30000 - 10000 - 5000)
+                        ]
+                    }
+                ]
+            }
+            
+            response = requests.post(f"{self.base_url}/revenue", json=revenue_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Mixed Payment Revenue", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            revenue_response = response.json()
+            test_revenue_id = revenue_response.get('id')
+            
+            # Verify ledger entries created correctly for both
+            time.sleep(2)  # Allow for processing
+            ledger_entries = self.get_ledger_entries()
+            vendor_payment_entries = [e for e in ledger_entries if e.get('reference_type') == 'vendor_payment']
+            
+            # Should have 6 entries: Hotel Complete (2 entries), Transport Partial (4 entries)
+            if len(vendor_payment_entries) >= 6:
+                self.log_result("Mixed Payment Ledger Entries", True, f"Created {len(vendor_payment_entries)} vendor payment entries")
+            else:
+                self.log_result("Mixed Payment Ledger Entries", False, f"Expected at least 6 entries, got {len(vendor_payment_entries)}")
+                return False
+            
+            # Verify Hotel Complete entries (₹20,000 fully paid)
+            hotel_entries = [e for e in vendor_payment_entries if 'Hotel Complete' in e.get('account', '') or 'Hotel Complete' in e.get('description', '')]
+            hotel_debit_total = sum(e.get('debit', 0) for e in hotel_entries)
+            
+            if abs(hotel_debit_total - 20000) < 0.01:
+                self.log_result("Hotel Complete Payment", True, f"Hotel Complete fully paid: ₹{hotel_debit_total}")
+            else:
+                self.log_result("Hotel Complete Payment", False, f"Expected ₹20000, got ₹{hotel_debit_total}")
+                return False
+            
+            # Verify Transport Partial entries (₹15,000 paid, ₹15,000 remaining)
+            transport_entries = [e for e in vendor_payment_entries if 'Transport Partial' in e.get('account', '') or 'Transport Partial' in e.get('description', '')]
+            transport_debit_total = sum(e.get('debit', 0) for e in transport_entries)
+            
+            if abs(transport_debit_total - 15000) < 0.01:  # 10000 + 5000
+                self.log_result("Transport Partial Payment", True, f"Transport Partial paid: ₹{transport_debit_total} (₹15000 remaining)")
+            else:
+                self.log_result("Transport Partial Payment", False, f"Expected ₹15000, got ₹{transport_debit_total}")
+                return False
+            
+            # Check that accounts show correct balances
+            # This would require checking the trial balance or account balances
+            response = requests.get(f"{self.base_url}/accounting/trial-balance", headers=self.headers)
+            if response.status_code == 200:
+                trial_balance = response.json()
+                if trial_balance.get('balanced', False):
+                    self.log_result("Account Balances Correct", True, "Trial balance is balanced after mixed payments")
+                else:
+                    self.log_result("Account Balances Correct", False, "Trial balance is not balanced")
+                    return False
+            
+            # Cleanup
+            self.delete_revenue(test_revenue_id)
+            
+            self.log_result("Multiple Cost Details Mixed Payment Status", True, "✅ Mixed payment status handled correctly")
+            return True
+            
+        except Exception as e:
+            self.log_result("Multiple Cost Details Mixed Payment Status", False, f"Error: {str(e)}")
+            return False
+    
+    def run_vendor_payment_tracking_tests(self):
+        """Run all Vendor Partial Payment Tracking tests"""
+        print("🚀 Starting Vendor Partial Payment Tracking Tests...")
+        print("=" * 70)
+        print("Testing NEW Vendor Partial Payment Tracking and Ledger Sync feature")
+        print("=" * 70)
+        
+        # Test Scenario 1: Create Revenue with Vendor Partial Payments
+        revenue_id = self.test_create_revenue_with_vendor_partial_payments()
+        
+        # Test Scenario 2: Update Revenue - Modify Vendor Payments (only if creation succeeded)
+        if revenue_id:
+            self.test_update_revenue_modify_vendor_payments(revenue_id)
+            
+            # Test Scenario 3: Update Revenue - Add New Vendor Cost with Payments
+            self.test_update_revenue_add_new_vendor_cost(revenue_id)
+            
+            # Test Scenario 4: Delete Revenue with Vendor Payments (only if updates succeeded)
+            self.test_delete_revenue_with_vendor_payments(revenue_id)
+        
+        # Test Scenario 5: Multiple Cost Details with Mixed Payment Status
+        self.test_multiple_cost_details_mixed_payment_status()
+        
+        return True
+
     # ===== SALE & COST TRACKING TESTS =====
     
     def test_create_revenue_with_vendor_costs(self):
