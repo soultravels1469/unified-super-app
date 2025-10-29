@@ -68,6 +68,30 @@ function Layout({ children, onLogout }) {
             })}
           </div>
           
+          {/* Services Section - Grouped */}
+          <div className="nav-section">
+            <div 
+              className="nav-section-title" 
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => setShowServicesMenu(!showServicesMenu)}
+            >
+              <span>Services</span>
+              <ChevronDown size={16} style={{ transform: showServicesMenu ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+            </div>
+            {showServicesMenu && servicesItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                data-testid={`nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                style={{ paddingLeft: '2.5rem' }}
+              >
+                <item.icon size={18} />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+          
           <div className="nav-section">
             <div className="nav-section-title">Accounting</div>
             {navItems.filter(item => item.section === 'accounting').map((item) => {
