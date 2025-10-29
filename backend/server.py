@@ -551,6 +551,23 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
         if 'cost_price_details' in update_data:
             new_cost_details = update_data['cost_price_details']
             await update_linked_expenses(revenue_id, old_cost_details, new_cost_details)
+            
+            # Handle vendor payment changes
+            # For each cost detail, compare old and new vendor payments
+            for new_detail in new_cost_details:
+                detail_id = new_detail.get('id')
+                if detail_id:
+                    # Find corresponding old detail
+                    old_detail = next((d for d in old_cost_details if d.get('id') == detail_id), None)
+                    
+                    # Delete old vendor payment ledgers and create new ones
+                    if old_detail:
+                        await accounting.delete_vendor_payment_ledger_entries(revenue_id, detail_id)
+                    
+                    # Create new vendor payment ledgers if any
+                    vendor_payments = new_detail.get('vendor_payments', [])
+                    if vendor_payments:
+                        await accounting.create_vendor_payment_ledger_entries(revenue_id, new_detail, vendor_payments)
     
     if update_data:
         await db.revenues.update_one({"id": revenue_id}, {"$set": update_data})
