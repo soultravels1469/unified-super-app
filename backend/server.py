@@ -375,6 +375,16 @@ async def create_partial_payment_ledgers(revenue_id: str, client_name: str, part
         }
         await db.ledgers.insert_one(ledger_entry)
 
+
+async def process_vendor_payments(revenue_id: str, cost_price_details: List[Dict]):
+    """Process vendor partial payments for each cost detail"""
+    for cost_detail in cost_price_details:
+        vendor_payments = cost_detail.get('vendor_payments', [])
+        if vendor_payments:
+            # Create ledger entries for vendor payments
+            await accounting.create_vendor_payment_ledger_entries(revenue_id, cost_detail, vendor_payments)
+
+
 async def update_linked_expenses(revenue_id: str, old_details: List, new_details: List):
     """Update linked expenses based on cost detail changes"""
     settings = await db.admin_settings.find_one({})
