@@ -72,16 +72,24 @@ class CostPriceDetail(BaseModel):
     notes: Optional[str] = ""
     linked_expense_id: Optional[str] = None
 
+class PartialPayment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    date: str
+    amount: float
+    bank_name: str
+    payment_mode: str
+    notes: Optional[str] = ""
+
 class Revenue(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     date: str
     client_name: str
-    source: str  # Visa, Ticket, Package
+    source: str  # Visa, Ticket, Package, Insurance
     payment_mode: str
     pending_amount: float
     received_amount: float
-    status: str  # Pending/Received
+    status: str  # Pending/Completed
     supplier: Optional[str] = ""
     notes: Optional[str] = ""
     sale_price: Optional[float] = 0.0
@@ -89,6 +97,7 @@ class Revenue(BaseModel):
     total_cost_price: Optional[float] = 0.0
     profit: Optional[float] = 0.0
     profit_margin: Optional[float] = 0.0
+    partial_payments: Optional[List[Dict]] = []
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RevenueCreate(BaseModel):
