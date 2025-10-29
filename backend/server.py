@@ -449,6 +449,9 @@ async def create_revenue(revenue: RevenueCreate):
     # Insert revenue
     await db.revenues.insert_one(doc)
     
+    # Log activity
+    await log_activity("CREATE", "Revenue", f"Created revenue for {revenue_obj.client_name} - ₹{revenue_obj.sale_price or revenue_obj.received_amount}")
+    
     # Create linked expenses from cost details
     if cost_price_details:
         linked_expense_ids = await create_linked_expenses(revenue_obj.id, doc)
