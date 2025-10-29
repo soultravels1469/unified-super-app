@@ -4,7 +4,7 @@ import { API } from '../App';
 import { toast } from 'sonner';
 import { X, Plus, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 
-function RevenueFormEnhancedFinal({ revenue, onClose, defaultSource = '' }) {
+function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
   // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => new Date().toISOString().split('T')[0];
   
