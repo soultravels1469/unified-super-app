@@ -325,13 +325,16 @@ async def create_linked_expenses(revenue_id: str, revenue_data: dict):
     linked_expense_ids = []
     
     for detail in cost_details:
+        # Only create expense if payment status is not "Pending" or if it's paid
+        payment_status = detail.get('payment_status', 'Done')
+        
         expense_data = {
             'id': str(uuid.uuid4()),
             'date': detail.get('payment_date', revenue_data['date']),
             'category': detail.get('category', 'Vendor Payment'),
             'payment_mode': 'Bank Transfer',
             'amount': detail.get('amount', 0),
-            'description': f"Auto-generated from Revenue - {revenue_data['client_name']} - Vendor: {detail.get('vendor_name', 'N/A')}",
+            'description': f"Auto-generated from Revenue - {revenue_data['client_name']} - Vendor: {detail.get('vendor_name', 'N/A')} - Status: {payment_status}",
             'purchase_type': 'General Expense',
             'supplier_gstin': '',
             'invoice_number': '',
@@ -344,14 +347,33 @@ async def create_linked_expenses(revenue_id: str, revenue_data: dict):
         # Insert expense
         await db.expenses.insert_one(expense_data)
         
-        # Create accounting ledger entry for expense
-        await accounting.create_expense_ledger_entry(expense_data)
+        # Create accounting ledger entry for expense only if payment is Done
+        if payment_status == 'Done':
+            await accounting.create_expense_ledger_entry(expense_data)
         
         # Update detail with linked_expense_id
         detail['linked_expense_id'] = expense_data['id']
         linked_expense_ids.append(expense_data['id'])
     
     return linked_expense_ids
+
+async def create_partial_payment_ledgers(revenue_id: str, client_name: str, partial_payments: List[Dict]):
+    """Create ledger entries for each partial payment"""
+    for payment in partial_payments:
+        # Create ledger entry for this partial payment
+        ledger_entry = {
+            'id': str(uuid.uuid4()),
+            'date': payment['date'],
+            'account': f"Customer - {client_name}",
+            'description': f"Partial payment received - {payment['payment_mode']} via {payment['bank_name']}",
+            'debit': 0.0,
+            'credit': payment['amount'],
+            'type': 'credit',
+            'reference_id': revenue_id,
+            'reference_type': 'partial_payment',
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        await db.ledgers.insert_one(ledger_entry)
 
 async def update_linked_expenses(revenue_id: str, old_details: List, new_details: List):
     """Update linked expenses based on cost detail changes"""
