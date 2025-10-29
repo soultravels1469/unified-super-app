@@ -358,7 +358,7 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                 marginTop: '1rem',
                 padding: '0.75rem',
                 background: '#fef2f2',
-                border: '1px solid '#fecaca',
+                border: '1px solid #fecaca',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
