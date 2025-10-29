@@ -57,7 +57,12 @@ function TourPackages() {
   return (
     <div className="page-container" data-testid="packages-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Tour Packages</h1>
+        <div>
+          <h1 className="page-title" style={{ margin: 0 }}>Tour Packages</h1>
+          <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.5rem' }}>
+            ℹ️ Entries are auto-generated from the Revenue module
+          </p>
+        </div>
         <button className="btn btn-primary" onClick={() => setShowForm(true)} data-testid="add-package-button">
           + Add Package
         </button>
