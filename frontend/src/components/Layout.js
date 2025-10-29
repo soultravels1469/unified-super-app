@@ -13,6 +13,7 @@ function Layout({ children, onLogout }) {
     { to: '/packages', icon: Package, label: 'Tour Packages', section: 'main', adminOnly: false },
     { to: '/tickets', icon: Plane, label: 'Tickets', section: 'main', adminOnly: false },
     { to: '/visas', icon: FileCheck, label: 'Visas', section: 'main', adminOnly: false },
+    { to: '/insurance', icon: Shield, label: 'Insurance', section: 'main', adminOnly: false },
     { to: '/expenses', icon: Receipt, label: 'Expenses', section: 'main', adminOnly: false },
     { to: '/pending', icon: Clock, label: 'Pending', section: 'main', adminOnly: false },
     { to: '/reports', icon: FileText, label: 'Reports', section: 'main' },
