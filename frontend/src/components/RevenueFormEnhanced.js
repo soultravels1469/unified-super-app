@@ -155,6 +155,47 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     setCostRows(newRows);
   };
 
+  // Vendor Payment Management
+  const addVendorPayment = (costIndex) => {
+    const newRows = [...costRows];
+    if (!newRows[costIndex].vendor_payments) {
+      newRows[costIndex].vendor_payments = [];
+    }
+    newRows[costIndex].vendor_payments.push({
+      id: `v_payment_${Date.now()}`,
+      amount: 0,
+      date: getTodayDate(),
+      payment_mode: 'Bank Transfer'
+    });
+    setCostRows(newRows);
+  };
+
+  const updateVendorPayment = (costIndex, paymentIndex, field, value) => {
+    const newRows = [...costRows];
+    newRows[costIndex].vendor_payments[paymentIndex][field] = value;
+    setCostRows(newRows);
+  };
+
+  const removeVendorPayment = (costIndex, paymentIndex) => {
+    const newRows = [...costRows];
+    newRows[costIndex].vendor_payments = newRows[costIndex].vendor_payments.filter((_, i) => i !== paymentIndex);
+    setCostRows(newRows);
+  };
+
+  const calculateVendorPaymentStatus = (row) => {
+    const totalPayable = parseFloat(row.amount) || 0;
+    const vendorPayments = row.vendor_payments || [];
+    const totalPaid = vendorPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const remaining = totalPayable - totalPaid;
+    
+    return {
+      totalPayable,
+      totalPaid,
+      remaining,
+      isSettled: remaining <= 0.01 && totalPaid > 0
+    };
+  };
+
   // Partial Payment Management
   const addPartialPayment = () => {
     setPartialPayments([...partialPayments, {
