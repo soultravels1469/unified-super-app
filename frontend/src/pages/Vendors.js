@@ -124,7 +124,10 @@ function Vendors() {
                   <select value={formData.vendor_type} onChange={(e) => setFormData({...formData, vendor_type: e.target.value})} required>
                     <option value="Hotel">Hotel</option>
                     <option value="Flight">Flight</option>
-                    <option value="Land">Land</option>
+                    <option value="Package">Package</option>
+                    <option value="Insurance">Insurance</option>
+                    <option value="Visa">Visa</option>
+                    <option value="Land">Land/Transport</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
