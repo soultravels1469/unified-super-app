@@ -8,7 +8,7 @@ import json
 import uuid
 
 # Configuration
-BACKEND_URL = "https://travelledger-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://voyage-books-1.preview.emergentagent.com/api"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
