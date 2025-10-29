@@ -474,6 +474,12 @@ async def create_revenue(revenue: RevenueCreate):
     calculations = calculate_cost_profit(sale_price, cost_price_details)
     revenue_dict.update(calculations)
     
+    # Auto-set status based on pending amount
+    if revenue_dict.get('pending_amount', 0) == 0:
+        revenue_dict['status'] = 'Completed'
+    else:
+        revenue_dict['status'] = 'Pending'
+    
     # Create revenue object
     revenue_obj = Revenue(**revenue_dict)
     doc = revenue_obj.model_dump()
@@ -496,8 +502,13 @@ async def create_revenue(revenue: RevenueCreate):
                 {'$set': {'cost_price_details': updated_cost_details}}
             )
     
-    # Create accounting ledger entry if revenue is received
-    if revenue_obj.status == 'Received' and revenue_obj.received_amount > 0:
+    # Create ledger entries for partial payments
+    partial_payments = revenue_dict.get('partial_payments', [])
+    if partial_payments:
+        await create_partial_payment_ledgers(revenue_obj.id, revenue_obj.client_name, partial_payments)
+    
+    # Create accounting ledger entry if revenue is received/completed
+    if revenue_obj.status in ['Received', 'Completed'] and revenue_obj.received_amount > 0:
         await accounting.create_revenue_ledger_entry(doc)
     
     return revenue_obj
