@@ -501,6 +501,9 @@ async def update_revenue(revenue_id: str, update: RevenueUpdate):
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     
+    # Log activity
+    await log_activity("UPDATE", "Revenue", f"Updated revenue for {updated['client_name']}")
+    
     # Sync with accounting when status changes to Received or amount changes
     new_received = updated.get('received_amount', 0)
     new_status = updated.get('status', 'Pending')
@@ -520,6 +523,9 @@ async def delete_revenue(revenue_id: str):
     existing = await db.revenues.find_one({"id": revenue_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Revenue not found")
+    
+    # Log activity
+    await log_activity("DELETE", "Revenue", f"Deleted revenue for {existing['client_name']}")
     
     # Delete all linked expenses first
     await delete_linked_expenses(revenue_id)
