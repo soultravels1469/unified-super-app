@@ -527,7 +527,7 @@ class AccountingService:
         # Find all ledger entries with reference starting with revenue_id and cost_detail_id
         reference_prefix = f"{revenue_id}_{cost_detail_id}"
         
-        ledger_entries = await self.db.ledger.find({
+        ledger_entries = await self.db.ledgers.find({
             'reference_type': 'vendor_payment',
             'reference_id': {'$regex': f'^{reference_prefix}'}
         }).to_list(1000)
