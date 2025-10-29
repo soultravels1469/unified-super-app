@@ -770,6 +770,175 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                         </div>
                       </div>
                     )}
+
+                    {/* Vendor Partial Payments Breakdown */}
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '2px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                          Vendor Payment Breakdown
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => addVendorPayment(index)}
+                          className="btn"
+                          style={{ 
+                            padding: '0.25rem 0.75rem', 
+                            fontSize: '0.875rem',
+                            background: '#10b981',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                        >
+                          <Plus size={14} />
+                          Add Payment
+                        </button>
+                      </div>
+
+                      {(() => {
+                        const paymentStatus = calculateVendorPaymentStatus(row);
+                        const vendorPayments = row.vendor_payments || [];
+
+                        return (
+                          <>
+                            {/* Payment Status Summary */}
+                            <div style={{ 
+                              padding: '0.75rem',
+                              background: paymentStatus.isSettled ? '#d1fae5' : '#fef3c7',
+                              borderRadius: '6px',
+                              marginBottom: '0.75rem',
+                              border: `1px solid ${paymentStatus.isSettled ? '#86efac' : '#fde68a'}`
+                            }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', fontSize: '0.875rem' }}>
+                                <div>
+                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Payable</div>
+                                  <div style={{ fontWeight: 600, color: '#1e293b' }}>₹{paymentStatus.totalPayable.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Paid</div>
+                                  <div style={{ fontWeight: 600, color: '#10b981' }}>₹{paymentStatus.totalPaid.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Remaining</div>
+                                  <div style={{ fontWeight: 600, color: '#ef4444' }}>₹{paymentStatus.remaining.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Status</div>
+                                  <div style={{ 
+                                    fontWeight: 600,
+                                    color: paymentStatus.isSettled ? '#065f46' : '#92400e'
+                                  }}>
+                                    {paymentStatus.isSettled ? '✓ Settled' : '⏳ Pending'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Payment Entries */}
+                            {vendorPayments.length > 0 ? (
+                              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                                {vendorPayments.map((payment, paymentIndex) => (
+                                  <div key={payment.id} style={{ 
+                                    padding: '0.75rem',
+                                    background: '#f1f5f9',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1'
+                                  }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '0.75fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'end' }}>
+                                      <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: '0.75rem' }}>Amount (₹)</label>
+                                        <input
+                                          type="number"
+                                          value={payment.amount}
+                                          onChange={(e) => updateVendorPayment(index, paymentIndex, 'amount', parseFloat(e.target.value) || 0)}
+                                          min="0"
+                                          step="0.01"
+                                          style={{ fontSize: '0.875rem', padding: '0.375rem' }}
+                                        />
+                                      </div>
+
+                                      <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: '0.75rem' }}>Date</label>
+                                        <input
+                                          type="date"
+                                          value={payment.date}
+                                          onChange={(e) => updateVendorPayment(index, paymentIndex, 'date', e.target.value)}
+                                          style={{ fontSize: '0.875rem', padding: '0.375rem' }}
+                                        />
+                                      </div>
+
+                                      <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: '0.75rem' }}>Mode</label>
+                                        <select
+                                          value={payment.payment_mode}
+                                          onChange={(e) => updateVendorPayment(index, paymentIndex, 'payment_mode', e.target.value)}
+                                          style={{ fontSize: '0.875rem', padding: '0.375rem' }}
+                                        >
+                                          <option value="Cash">Cash</option>
+                                          <option value="Bank Transfer">Bank Transfer</option>
+                                          <option value="UPI">UPI</option>
+                                          <option value="Cheque">Cheque</option>
+                                        </select>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => removeVendorPayment(index, paymentIndex)}
+                                        style={{ 
+                                          border: 'none',
+                                          background: '#ef4444',
+                                          color: 'white',
+                                          padding: '0.375rem',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ 
+                                textAlign: 'center',
+                                padding: '1rem',
+                                color: '#94a3b8',
+                                fontSize: '0.875rem',
+                                background: '#f9fafb',
+                                borderRadius: '6px',
+                                border: '1px dashed #e5e7eb'
+                              }}>
+                                No payments recorded yet. Click "+ Add Payment" to track vendor payments.
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '0.875rem', color: '#ef4444' }}>Due Date</label>
+                          <input
+                            type="date"
+                            value={row.due_date || ''}
+                            onChange={(e) => updateCostRow(index, 'due_date', e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label style={{ fontSize: '0.875rem' }}>Notes</label>
+                          <input
+                            type="text"
+                            value={row.notes || ''}
+                            onChange={(e) => updateCostRow(index, 'notes', e.target.value)}
+                            placeholder="Payment pending notes..."
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
