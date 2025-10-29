@@ -383,13 +383,12 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Sale & Cost Tracking with Multi-Vendor Support"
-    - "Auto-Expense Sync functionality"
+    - "Vendor Partial Payment Tracking and Ledger Sync"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
