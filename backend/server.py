@@ -112,6 +112,7 @@ class RevenueCreate(BaseModel):
     notes: Optional[str] = ""
     sale_price: Optional[float] = 0.0
     cost_price_details: Optional[List[Dict]] = []
+    partial_payments: Optional[List[Dict]] = []
 
 class RevenueUpdate(BaseModel):
     date: Optional[str] = None
