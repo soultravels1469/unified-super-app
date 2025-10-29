@@ -465,3 +465,88 @@ class AccountingService:
         
         await self.db.gst_records.insert_one(gst_record)
 
+
+    async def create_vendor_payment_ledger_entries(self, revenue_id: str, cost_detail: dict, vendor_payments: List[Dict]):
+        """
+        Create ledger entries for vendor partial payments
+        Each payment creates:
+        - Debit: Vendor - [Vendor Name] (Liability decrease)
+        - Credit: Bank/Cash (Asset decrease)
+        """
+        vendor_name = cost_detail.get('vendor_name', 'Unknown Vendor')
+        
+        for payment in vendor_payments:
+            payment_id = payment.get('id', str(uuid.uuid4()))
+            amount = payment.get('amount', 0)
+            payment_date = payment.get('date')
+            payment_mode = payment.get('payment_mode', 'Bank Transfer')
+            
+            if amount <= 0:
+                continue
+            
+            timestamp = datetime.now(timezone.utc).isoformat()
+            
+            # Determine payment account based on mode
+            payment_account = 'Cash' if payment_mode == 'Cash' else 'Bank - Current Account'
+            
+            # Create vendor ledger entry (Debit - decreasing liability)
+            vendor_ledger = {
+                'id': str(uuid.uuid4()),
+                'date': payment_date,
+                'account': f"Vendor - {vendor_name}",
+                'description': f"Payment to vendor via {payment_mode}",
+                'debit': amount,
+                'credit': 0.0,
+                'reference_type': 'vendor_payment',
+                'reference_id': f"{revenue_id}_{cost_detail.get('id')}_{payment_id}",
+                'created_at': timestamp
+            }
+            
+            # Create bank/cash ledger entry (Credit - decreasing asset)
+            payment_ledger = {
+                'id': str(uuid.uuid4()),
+                'date': payment_date,
+                'account': payment_account,
+                'description': f"Payment to {vendor_name} via {payment_mode}",
+                'debit': 0.0,
+                'credit': amount,
+                'reference_type': 'vendor_payment',
+                'reference_id': f"{revenue_id}_{cost_detail.get('id')}_{payment_id}",
+                'created_at': timestamp
+            }
+            
+            # Insert both ledger entries
+            await self.db.ledger.insert_many([vendor_ledger, payment_ledger])
+            
+            # Update account balances
+            await self.update_account_balance(f"Vendor - {vendor_name}", amount, 'debit')
+            await self.update_account_balance(payment_account, amount, 'credit')
+    
+    async def delete_vendor_payment_ledger_entries(self, revenue_id: str, cost_detail_id: str):
+        """Delete all vendor payment ledger entries for a specific cost detail"""
+        # Find all ledger entries with reference starting with revenue_id and cost_detail_id
+        reference_prefix = f"{revenue_id}_{cost_detail_id}"
+        
+        ledger_entries = await self.db.ledger.find({
+            'reference_type': 'vendor_payment',
+            'reference_id': {'$regex': f'^{reference_prefix}'}
+        }).to_list(1000)
+        
+        # Reverse each entry (opposite operation to restore balance)
+        for entry in ledger_entries:
+            account = entry['account']
+            debit_amount = entry.get('debit', 0)
+            credit_amount = entry.get('credit', 0)
+            
+            # Reverse the balance change
+            if debit_amount > 0:
+                await self.update_account_balance(account, debit_amount, 'credit')
+            if credit_amount > 0:
+                await self.update_account_balance(account, credit_amount, 'debit')
+        
+        # Delete the ledger entries
+        await self.db.ledger.delete_many({
+            'reference_type': 'vendor_payment',
+            'reference_id': {'$regex': f'^{reference_prefix}'}
+        })
+
