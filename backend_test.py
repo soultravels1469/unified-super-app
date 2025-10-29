@@ -1545,10 +1545,11 @@ class VendorPaymentTrackingTester:
             return False
     
     def run_all_tests(self):
-        """Run all Sale & Cost Tracking and Difference-Based Sync tests"""
+        """Run all Vendor Payment Tracking, Sale & Cost Tracking and Difference-Based Sync tests"""
         print("🚀 Starting Comprehensive Backend API Tests...")
         print("=" * 80)
-        print("Testing NEW Sale & Cost Tracking feature with multi-vendor support")
+        print("Testing NEW Vendor Partial Payment Tracking and Ledger Sync feature")
+        print("Testing Sale & Cost Tracking feature with multi-vendor support")
         print("Testing auto-expense sync functionality")
         print("Testing difference-based sync logic for Revenue and Expense updates")
         print("=" * 80)
@@ -1557,6 +1558,10 @@ class VendorPaymentTrackingTester:
         if not self.login():
             print("❌ Cannot proceed without authentication")
             return False
+        
+        # Run Vendor Payment Tracking Tests (PRIORITY)
+        print("\n📋 Testing Vendor Partial Payment Tracking Feature...")
+        self.run_vendor_payment_tracking_tests()
         
         # Run Sale & Cost Tracking Tests
         print("\n📋 Testing Sale & Cost Tracking Feature...")
