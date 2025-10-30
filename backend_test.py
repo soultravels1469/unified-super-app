@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for CRM Module Integration
-Tests NEW CRM Module backend endpoints comprehensively
-Includes Lead CRUD, Auto-Revenue Creation, Document Upload, Reminders, Analytics
+Backend API Testing for CRM-Finance Integration
+Tests the 4 PRIMARY TESTS from review request:
+1. Auto-Revenue Creation: Create lead with status='New', update to 'Booked', verify revenue auto-created
+2. Sync Endpoint: GET /api/sync/crm-finance - verify it syncs booked leads without revenue entries
+3. Upcoming Travels Dashboard: GET /api/crm/upcoming-travels-dashboard - create lead with travel_date in next 15 days, verify it appears
+4. Reminders Filter: GET /api/crm/reminders?status=Pending - verify only pending reminders returned
 """
 
 import requests
@@ -12,7 +15,7 @@ import sys
 from pathlib import Path
 import uuid
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import io
 
 # Configuration
