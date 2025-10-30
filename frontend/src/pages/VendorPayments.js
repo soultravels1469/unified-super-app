@@ -26,7 +26,8 @@ function VendorPayments() {
           vendors.push({
             id: `${rev.id}_${vendor.vendor_name}`,
             vendor_name: vendor.vendor_name,
-            vendor_phone: vendor.vendor_phone,
+            vendor_type: vendor.vendor_type || 'Hotel',
+            vendor_note: vendor.vendor_note || '',
             due_date: rev.date,
             pending_amount: pendingAmount,
             status: vendor.payment_status || (pendingAmount > 0 ? 'Pending' : 'Done'),
