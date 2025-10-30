@@ -479,13 +479,14 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Phone</label>
-                      <input
-                        type="text"
-                        value={row.vendor_phone || ''}
-                        onChange={(e) => updateCostRow(index, 'vendor_phone', e.target.value)}
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Vendor Type</label>
+                      <select
+                        value={row.vendor_type || 'Hotel'}
+                        onChange={(e) => updateCostRow(index, 'vendor_type', e.target.value)}
                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
-                      />
+                      >
+                        {VENDOR_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                      </select>
                     </div>
 
                     <div>
@@ -505,6 +506,17 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                         value={pendingAmount.toFixed(2)}
                         readOnly
                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', backgroundColor: '#f3f4f6', fontWeight: '600', color: pendingAmount > 0 ? '#dc2626' : '#16a34a' }}
+                      />
+                    </div>
+
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Note</label>
+                      <textarea
+                        value={row.vendor_note || ''}
+                        onChange={(e) => updateCostRow(index, 'vendor_note', e.target.value)}
+                        rows={2}
+                        placeholder="Add vendor note..."
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', resize: 'vertical' }}
                       />
                     </div>
                   </div>
