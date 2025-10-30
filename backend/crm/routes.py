@@ -71,16 +71,16 @@ async def get_lead(
 @router.put("/leads/{lead_id}")
 async def update_lead(
     lead_id: str,
-    lead_data: LeadUpdate,
+    lead_update: LeadUpdate,
     controller: CRMController = Depends(get_crm_controller),
     current_user: dict = None
 ):
     """Update a lead"""
     user_id = current_user.get("username") if current_user else "admin"
-    lead = await controller.update_lead(lead_id, lead_data, user_id)
-    if not lead:
+    updated_lead = await controller.update_lead(lead_id, lead_update, user_id)
+    if not updated_lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    return {"success": True, "lead": lead}
+    return {"success": True, "lead": updated_lead}
 
 
 @router.delete("/leads/{lead_id}")
