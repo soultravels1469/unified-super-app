@@ -193,124 +193,72 @@ class CRMBackendTester:
     # ===== CRM LEAD CRUD TESTS =====
     
     def test_create_lead(self):
-        """Test Scenario 1: CREATE Revenue with Vendor Partial Payments"""
+        """Test Scenario 1: CREATE Lead with all fields"""
         try:
-            print("\n🔍 SCENARIO 1: CREATE Revenue with Vendor Partial Payments")
+            print("\n🔍 SCENARIO 1: CREATE Lead with all fields")
             
-            # First create a vendor if needed
-            vendor_id = self.create_vendor("Hotel ABC", "Hotel")
-            
-            # Get bank accounts list
-            bank_accounts = self.get_bank_accounts()
-            self.log_result("Get Bank Accounts", True, f"Found {len(bank_accounts)} bank accounts")
-            
-            # Create revenue with cost details including vendor payments
-            revenue_data = {
-                "date": "2025-01-29",
-                "client_name": "Adventure Tours Client",
-                "source": "Package",
-                "payment_mode": "Bank Transfer",
-                "sale_price": 100000,
-                "received_amount": 100000,
-                "pending_amount": 0,
-                "status": "Completed",
-                "cost_price_details": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "vendor_name": "Hotel ABC",
-                        "category": "Hotel",
-                        "amount": 30000,
-                        "payment_status": "Pending",
-                        "vendor_payments": [
-                            {
-                                "id": "vp_1",
-                                "amount": 10000,
-                                "date": "2025-01-29",
-                                "payment_mode": "Bank Transfer"
-                            },
-                            {
-                                "id": "vp_2", 
-                                "amount": 5000,
-                                "date": "2025-01-30",
-                                "payment_mode": "Cash"
-                            }
-                        ]
-                    }
-                ]
+            # Create lead with comprehensive data
+            lead_data = {
+                "client_name": "John Smith",
+                "primary_phone": "+91-9876543210",
+                "alternate_phone": "+91-9876543211",
+                "email": "john.smith@example.com",
+                "lead_type": "Visa",
+                "source": "Walk-in",
+                "status": "New",
+                "labels": ["VIP", "Priority"],
+                "notes": "Interested in Canada PR visa. Has IELTS score 8.5",
+                "travel_date": (datetime.now() + timedelta(days=30)).isoformat()
             }
             
-            response = requests.post(f"{self.base_url}/revenue", json=revenue_data, headers=self.headers)
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
             
             if response.status_code != 200:
-                self.log_result("Create Revenue with Vendor Payments", False, f"Failed with status {response.status_code}", response.text)
+                self.log_result("Create Lead", False, f"Failed with status {response.status_code}", response.text)
                 return False
             
-            revenue_response = response.json()
-            revenue_id = revenue_response.get('id')
-            
-            # Verify response has revenue created with cost_price_details preserved
-            cost_details = revenue_response.get('cost_price_details', [])
-            if len(cost_details) == 1 and cost_details[0].get('vendor_payments'):
-                self.log_result("Revenue Created with Vendor Payments", True, f"Revenue created with vendor payments preserved")
-            else:
-                self.log_result("Revenue Created with Vendor Payments", False, "Vendor payments not preserved in response")
+            response_data = response.json()
+            if not response_data.get('success'):
+                self.log_result("Create Lead", False, "Response success is False", response_data)
                 return False
             
-            # Check Ledger Entries - verify vendor payment ledgers created
-            time.sleep(2)  # Allow for ledger processing
-            ledger_entries = self.get_ledger_entries()
-            vendor_payment_entries = [e for e in ledger_entries if e.get('reference_type') == 'vendor_payment']
-            
-            if len(vendor_payment_entries) == 4:  # 2 payments × 2 entries each (debit + credit)
-                self.log_result("Vendor Payment Ledger Entries", True, f"Created {len(vendor_payment_entries)} vendor payment ledger entries")
-            else:
-                self.log_result("Vendor Payment Ledger Entries", False, f"Expected 4 entries, got {len(vendor_payment_entries)}")
+            lead = response_data.get('lead')
+            if not lead:
+                self.log_result("Create Lead", False, "No lead data in response")
                 return False
             
-            # Verify ledger entry details
-            vendor_debits = [e for e in vendor_payment_entries if e.get('account') == 'Vendor - Hotel ABC' and e.get('debit', 0) > 0]
-            bank_credits = [e for e in vendor_payment_entries if e.get('account') == 'Bank - Current Account' and e.get('credit', 0) > 0]
-            cash_credits = [e for e in vendor_payment_entries if e.get('account') == 'Cash' and e.get('credit', 0) > 0]
-            
-            # Verify amounts
-            total_vendor_debit = sum(e.get('debit', 0) for e in vendor_debits)
-            total_bank_credit = sum(e.get('credit', 0) for e in bank_credits)
-            total_cash_credit = sum(e.get('credit', 0) for e in cash_credits)
-            
-            if abs(total_vendor_debit - 15000) < 0.01:  # 10000 + 5000
-                self.log_result("Vendor Debit Amount", True, f"Correct vendor debit total: ₹{total_vendor_debit}")
-            else:
-                self.log_result("Vendor Debit Amount", False, f"Expected ₹15000, got ₹{total_vendor_debit}")
+            # Verify lead fields
+            if lead.get('client_name') != lead_data['client_name']:
+                self.log_result("Lead Client Name", False, f"Expected {lead_data['client_name']}, got {lead.get('client_name')}")
                 return False
             
-            if abs(total_bank_credit - 10000) < 0.01:
-                self.log_result("Bank Credit Amount", True, f"Correct bank credit: ₹{total_bank_credit}")
-            else:
-                self.log_result("Bank Credit Amount", False, f"Expected ₹10000, got ₹{total_bank_credit}")
+            if lead.get('lead_type') != lead_data['lead_type']:
+                self.log_result("Lead Type", False, f"Expected {lead_data['lead_type']}, got {lead.get('lead_type')}")
                 return False
             
-            if abs(total_cash_credit - 5000) < 0.01:
-                self.log_result("Cash Credit Amount", True, f"Correct cash credit: ₹{total_cash_credit}")
-            else:
-                self.log_result("Cash Credit Amount", False, f"Expected ₹5000, got ₹{total_cash_credit}")
+            # Verify auto-generated fields
+            if not lead.get('lead_id') or not lead.get('lead_id').startswith('LD-'):
+                self.log_result("Lead ID Generation", False, f"Invalid lead_id: {lead.get('lead_id')}")
                 return False
             
-            # Verify reference_id format: "{revenue_id}_{cost_detail_id}_{payment_id}"
-            reference_ids = [e.get('reference_id') for e in vendor_payment_entries]
-            expected_refs = [f"{revenue_id}_{cost_details[0]['id']}_vp_1", f"{revenue_id}_{cost_details[0]['id']}_vp_2"]
-            
-            valid_refs = all(any(ref.endswith(expected) for expected in ['_vp_1', '_vp_2']) for ref in reference_ids)
-            if valid_refs:
-                self.log_result("Reference ID Format", True, "Reference IDs follow correct format")
-            else:
-                self.log_result("Reference ID Format", False, f"Invalid reference ID format: {reference_ids}")
+            if not lead.get('referral_code') or len(lead.get('referral_code')) != 6:
+                self.log_result("Referral Code Generation", False, f"Invalid referral_code: {lead.get('referral_code')}")
                 return False
             
-            self.log_result("Create Revenue with Vendor Partial Payments", True, "✅ Revenue created with correct vendor payment ledger entries")
-            return revenue_id
+            # Verify default values
+            if lead.get('loyalty_points') != 0:
+                self.log_result("Default Loyalty Points", False, f"Expected 0, got {lead.get('loyalty_points')}")
+                return False
+            
+            if lead.get('referred_clients') != []:
+                self.log_result("Default Referred Clients", False, f"Expected empty array, got {lead.get('referred_clients')}")
+                return False
+            
+            self.log_result("Create Lead", True, f"✅ Lead created successfully with ID: {lead.get('lead_id')}")
+            return lead
             
         except Exception as e:
-            self.log_result("Create Revenue with Vendor Partial Payments", False, f"Error: {str(e)}")
+            self.log_result("Create Lead", False, f"Error: {str(e)}")
             return False
     
     def test_update_revenue_modify_vendor_payments(self, revenue_id):
