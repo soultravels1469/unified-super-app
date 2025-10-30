@@ -34,8 +34,8 @@ import CRMReports from '@/pages/crm/Reports';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
-//const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-//export const API = `${BACKEND_URL}/api`;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+export const API = `${BACKEND_URL}/api`;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
