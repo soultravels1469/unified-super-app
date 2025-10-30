@@ -490,7 +490,7 @@ async def get_revenues():
         raise HTTPException(status_code=500, detail=f"Error fetching revenues: {str(e)}")
 
 @api_router.post("/revenue", response_model=Revenue)
-async def create_revenue(revenue: RevenueCreate):
+async def create_revenue(revenue: RevenueCreate, current_user: dict = Depends(lambda: {"username": "admin"})):
     revenue_dict = revenue.model_dump()
     
     # Calculate cost, profit, and profit margin
@@ -505,6 +505,14 @@ async def create_revenue(revenue: RevenueCreate):
         revenue_dict['status'] = 'Completed'
     else:
         revenue_dict['status'] = 'Pending'
+    
+    # Log activity
+    await activity_logger.log_activity(
+        module="Revenue",
+        action="create",
+        user=current_user.get("username", "admin"),
+        details={"client_name": revenue_dict.get("client_name"), "amount": sale_price}
+    )
     
     # Create revenue object
     revenue_obj = Revenue(**revenue_dict)
