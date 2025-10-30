@@ -397,6 +397,21 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: All analytics endpoints working correctly with proper data aggregation. Verified: (1) DASHBOARD SUMMARY - returns correct counts (total_leads: 41, active_leads: 34, booked_leads: 7, upcoming_travels: 2, today_reminders: 0, total_referrals: 15), (2) MONTHLY REPORT - 12 months data with proper structure, (3) LEAD TYPE BREAKDOWN - 3 types (Visa/Ticket/Package) distribution, (4) LEAD SOURCE BREAKDOWN - 4 sources distribution, (5) UPCOMING TRAVELS - correctly detects leads with travel_date in next 10 days. All MongoDB aggregation pipelines functioning efficiently."
 
+  - task: "Revenue endpoint legacy data handling fix"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed GET /api/revenue endpoint to handle legacy data without strict validation errors. Modified endpoint to return raw data without forcing strict Revenue model validation, allowing both old schema (with '_id', 'service_type') and new schema (with 'id', 'source') to coexist."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Revenue endpoint fix working perfectly! Verified: (1) GET /api/revenue successfully retrieves 25 revenue entries (23 new format, 1 legacy format) without errors, (2) Endpoint handles both legacy data (with '_id' and 'service_type' fields) and new data (with 'id' and 'source' fields) correctly, (3) Created test lead LD-20251030-7419 and marked as Booked, (4) Auto-revenue creation working - revenue e7b8bf07-4c84-4216-b1a0-41e102dc5457 created with correct fields, (5) Revenue count increased from 24 to 25, all entries accessible. CRITICAL FIX CONFIRMED: The revenue endpoint now properly handles legacy data without validation errors while maintaining full functionality for new entries and auto-revenue creation from CRM leads."
+
 frontend:
   - task: "Vendor Partial Payment UI in Revenue Form"
     implemented: true
