@@ -143,7 +143,14 @@ function VendorPayments() {
                   <tr key={vendor.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                     <td style={{ padding: '1rem', color: '#6b7280', fontWeight: '500' }}>{index + 1}</td>
                     <td style={{ padding: '1rem', fontWeight: '600', color: '#111827' }}>{vendor.vendor_name}</td>
-                    <td style={{ padding: '1rem', color: '#6b7280' }}>{vendor.vendor_phone || '-'}</td>
+                    <td style={{ padding: '1rem', color: '#6b7280' }}>
+                      <span style={{ padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.25rem', fontSize: '0.875rem' }}>
+                        {vendor.vendor_type}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {vendor.vendor_note || '-'}
+                    </td>
                     <td style={{ padding: '1rem', color: '#6b7280' }}>{vendor.client_name}</td>
                     <td style={{ padding: '1rem', color: '#6b7280' }}>{new Date(vendor.due_date).toLocaleDateString()}</td>
                     <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', color: vendor.pending_amount > 0 ? '#dc2626' : '#16a34a' }}>
