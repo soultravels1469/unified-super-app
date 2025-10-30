@@ -13,6 +13,7 @@ function Layout({ children, onLogout }) {
     { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
     { to: '/revenue', icon: DollarSign, label: 'Revenue', section: 'main', adminOnly: false },
     { to: '/expenses', icon: Receipt, label: 'Expenses', section: 'main', adminOnly: false },
+    { to: '/vendor-payments', icon: CreditCard, label: 'Vendor Payments', section: 'main', adminOnly: false },
     { to: '/pending', icon: Clock, label: 'Pending', section: 'main', adminOnly: false },
     { to: '/reports', icon: FileText, label: 'Reports', section: 'main' },
     { to: '/accounting/chart-of-accounts', icon: Book, label: 'Chart of Accounts', section: 'accounting' },
