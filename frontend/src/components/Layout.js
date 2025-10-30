@@ -7,7 +7,7 @@ function Layout({ children, onLogout }) {
   const role = localStorage.getItem('role');
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   const [showServicesMenu, setShowServicesMenu] = useState(false);
-  const [showCRMMenu, setShowCRMMenu] = useState(false);
+  const [showCRMMenu, setShowCRMMenu] = useState(true); // CRM expanded by default
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
