@@ -44,6 +44,11 @@ db = client[db_name]
 
 print("✅ MongoDB Connected Successfully")
 
+import os
+
+# Ensure the backup folder exists
+os.makedirs("backend/backups", exist_ok=True)
+
 # Initialize services
 accounting = AccountingService(db)
 activity_logger = ActivityLogger(db)
