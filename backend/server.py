@@ -468,13 +468,24 @@ async def delete_linked_expenses(revenue_id: str):
         await db.ledgers.delete_many({'reference_id': expense_id})
         await db.gst_records.delete_many({'reference_id': expense_id})
 
-@api_router.get("/revenue", response_model=List[Revenue])
+@api_router.get("/revenue")
 async def get_revenues():
-    revenues = await db.revenues.find({}, {"_id": 0}).to_list(1000)
-    for rev in revenues:
-        if isinstance(rev.get('created_at'), str):
-            rev['created_at'] = datetime.fromisoformat(rev['created_at'])
-    return revenues
+    """Get all revenue entries - returns raw data without strict validation"""
+    try:
+        revenues = await db.revenues.find({}).to_list(1000)
+        # Convert ObjectId to string for JSON serialization
+        for rev in revenues:
+            if '_id' in rev:
+                rev['_id'] = str(rev['_id'])
+            # Handle datetime conversion
+            if isinstance(rev.get('created_at'), str):
+                try:
+                    rev['created_at'] = datetime.fromisoformat(rev['created_at'])
+                except:
+                    pass
+        return revenues
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching revenues: {str(e)}")
 
 @api_router.post("/revenue", response_model=Revenue)
 async def create_revenue(revenue: RevenueCreate):
