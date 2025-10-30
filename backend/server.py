@@ -29,8 +29,9 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Initialize accounting service
+# Initialize services
 accounting = AccountingService(db)
+activity_logger = ActivityLogger(db)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
