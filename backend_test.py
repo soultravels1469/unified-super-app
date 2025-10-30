@@ -72,31 +72,30 @@ class CRMFinanceIntegrationTester:
             return False
     
     
-    def get_ledger_entries(self):
-        """Get all ledger entries"""
+    def get_revenues(self):
+        """Get all revenues"""
         try:
-            response = requests.get(f"{self.base_url}/accounting/ledger", headers=self.headers)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get('entries', [])
-            else:
-                self.log_result("Get Ledger Entries", False, f"Failed with status {response.status_code}", response.text)
-                return []
-        except Exception as e:
-            self.log_result("Get Ledger Entries", False, f"Error: {str(e)}")
-            return []
-    
-    def get_expenses(self):
-        """Get all expenses"""
-        try:
-            response = requests.get(f"{self.base_url}/expenses", headers=self.headers)
+            response = requests.get(f"{self.base_url}/revenue", headers=self.headers)
             if response.status_code == 200:
                 return response.json()
             else:
-                self.log_result("Get Expenses", False, f"Failed with status {response.status_code}", response.text)
+                self.log_result("Get Revenues", False, f"Failed with status {response.status_code}", response.text)
                 return []
         except Exception as e:
-            self.log_result("Get Expenses", False, f"Error: {str(e)}")
+            self.log_result("Get Revenues", False, f"Error: {str(e)}")
+            return []
+    
+    def get_leads(self):
+        """Get all leads"""
+        try:
+            response = requests.get(f"{self.base_url}/crm/leads", headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.log_result("Get Leads", False, f"Failed with status {response.status_code}", response.text)
+                return []
+        except Exception as e:
+            self.log_result("Get Leads", False, f"Error: {str(e)}")
             return []
     
     def create_vendor(self, vendor_name, vendor_type="Hotel"):
