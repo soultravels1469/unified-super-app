@@ -1384,6 +1384,18 @@ async def rebuild_accounting_data():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/activity-logs")
+async def get_activity_logs(
+    limit: int = 100,
+    module: Optional[str] = None
+):
+    """Get activity logs"""
+    try:
+        logs = await activity_logger.get_logs(limit=limit, module=module)
+        return logs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/sync/crm-finance")
 async def sync_crm_finance():
     """Sync CRM booked leads with Finance revenue entries"""
