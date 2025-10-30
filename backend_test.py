@@ -2383,17 +2383,44 @@ class CRMBackendTester:
 
 def main():
     """Main test execution"""
-    tester = VendorPaymentTrackingTester()
-    success = tester.run_all_tests()
+    tester = CRMBackendTester()
     
-    if success:
-        print("\n🎉 All Vendor Payment Tracking, Sale & Cost Tracking and Sync Logic tests passed!")
-        print("✅ The NEW Vendor Partial Payment Tracking feature is working correctly!")
-        print("✅ Ledger sync with reference_type='vendor_payment' functioning properly!")
-        print("✅ Multi-vendor support and auto-expense sync functioning properly!")
+    # Login first
+    if not tester.login():
+        print("❌ Login failed - cannot proceed with tests")
+        return 1
+    
+    # Run CRM backend tests
+    success = tester.run_crm_backend_tests()
+    
+    # Print summary
+    print("\n" + "=" * 70)
+    print("🔍 CRM BACKEND TEST SUMMARY")
+    print("=" * 70)
+    
+    passed_tests = [result for result in tester.test_results if result['success']]
+    failed_tests = [result for result in tester.test_results if not result['success']]
+    
+    print(f"✅ PASSED: {len(passed_tests)} tests")
+    print(f"❌ FAILED: {len(failed_tests)} tests")
+    print(f"📊 SUCCESS RATE: {len(passed_tests)}/{len(tester.test_results)} ({len(passed_tests)/len(tester.test_results)*100:.1f}%)")
+    
+    if failed_tests:
+        print("\n❌ FAILED TESTS:")
+        for test in failed_tests:
+            print(f"   • {test['test']}: {test['message']}")
+    
+    if success and len(failed_tests) == 0:
+        print("\n🎉 All CRM Backend tests passed!")
+        print("✅ Lead CRUD operations working correctly!")
+        print("✅ Auto-revenue creation on Booked status functioning!")
+        print("✅ Referral system and loyalty points working!")
+        print("✅ Reminders CRUD operations functioning!")
+        print("✅ Analytics endpoints returning correct data!")
+        print("✅ Document upload/download/delete working with validations!")
         return 0
     else:
-        print("\n💥 Some tests failed!")
+        print("\n💥 Some CRM tests failed!")
         print("❌ Issues detected - needs investigation")
         return 1
 
