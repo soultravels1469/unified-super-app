@@ -657,10 +657,23 @@ class CRMFinanceIntegrationTester:
         else:
             print("🎉 ALL PRIMARY TESTS PASSED!")
             return True
+
+def main():
+    """Main test execution for CRM-Finance Integration"""
+    tester = CRMFinanceIntegrationTester()
     
-    # ===== CRM LEAD CRUD TESTS =====
+    # Run the 4 primary tests
+    success = tester.run_primary_tests()
     
-    def test_create_lead(self):
+    if success:
+        print("\n🎉 ALL CRM-FINANCE INTEGRATION TESTS PASSED!")
+        return 0
+    else:
+        print("\n💥 SOME TESTS FAILED - NEEDS INVESTIGATION")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
         """Test Scenario 1: CREATE Lead with all fields"""
         try:
             print("\n🔍 SCENARIO 1: CREATE Lead with all fields")
