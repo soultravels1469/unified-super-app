@@ -36,6 +36,7 @@ async def create_lead(
     current_user: dict = None  # Will be injected by auth middleware
 ):
     """Create a new lead"""
+    print(f"DEBUG: Received lead_data: {lead_data}")
     try:
         # Convert dict to LeadCreate model
         lead = LeadCreate(**lead_data)
@@ -43,6 +44,7 @@ async def create_lead(
         created_lead = await controller.create_lead(lead, user_id)
         return {"success": True, "lead": created_lead}
     except Exception as e:
+        print(f"DEBUG: Error creating lead: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid lead data: {str(e)}")
 
 
