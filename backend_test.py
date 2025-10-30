@@ -261,6 +261,229 @@ class CRMBackendTester:
             self.log_result("Create Lead", False, f"Error: {str(e)}")
             return False
     
+    def test_get_leads_with_filters(self):
+        """Test Scenario 2: GET Leads with filters and pagination"""
+        try:
+            print("\n🔍 SCENARIO 2: GET Leads with filters and pagination")
+            
+            # Create multiple leads for testing filters
+            leads_to_create = [
+                {
+                    "client_name": "Alice Johnson",
+                    "primary_phone": "+91-9876543220",
+                    "email": "alice@example.com",
+                    "lead_type": "Visa",
+                    "source": "Instagram",
+                    "status": "New"
+                },
+                {
+                    "client_name": "Bob Wilson",
+                    "primary_phone": "+91-9876543221",
+                    "email": "bob@example.com",
+                    "lead_type": "Ticket",
+                    "source": "Walk-in",
+                    "status": "In Process"
+                },
+                {
+                    "client_name": "Carol Davis",
+                    "primary_phone": "+91-9876543222",
+                    "email": "carol@example.com",
+                    "lead_type": "Package",
+                    "source": "Website",
+                    "status": "Booked"
+                }
+            ]
+            
+            created_leads = []
+            for lead_data in leads_to_create:
+                response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+                if response.status_code == 200:
+                    created_leads.append(response.json().get('lead'))
+            
+            if len(created_leads) != 3:
+                self.log_result("Create Test Leads", False, f"Expected 3 leads, created {len(created_leads)}")
+                return False
+            
+            self.log_result("Create Test Leads", True, f"Created {len(created_leads)} test leads")
+            
+            # Test 1: Get all leads (no filters)
+            response = requests.get(f"{self.base_url}/crm/leads", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get All Leads", False, f"Failed with status {response.status_code}")
+                return False
+            
+            all_leads_data = response.json()
+            if all_leads_data.get('total', 0) < 3:
+                self.log_result("Get All Leads", False, f"Expected at least 3 leads, got {all_leads_data.get('total')}")
+                return False
+            
+            self.log_result("Get All Leads", True, f"Retrieved {all_leads_data.get('total')} total leads")
+            
+            # Test 2: Filter by lead_type=Visa
+            response = requests.get(f"{self.base_url}/crm/leads?lead_type=Visa", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Filter by Lead Type", False, f"Failed with status {response.status_code}")
+                return False
+            
+            visa_leads = response.json()
+            visa_count = len([lead for lead in visa_leads.get('leads', []) if lead.get('lead_type') == 'Visa'])
+            if visa_count < 1:
+                self.log_result("Filter by Lead Type", False, f"Expected at least 1 Visa lead, got {visa_count}")
+                return False
+            
+            self.log_result("Filter by Lead Type", True, f"Found {visa_count} Visa leads")
+            
+            # Test 3: Filter by status=New
+            response = requests.get(f"{self.base_url}/crm/leads?status=New", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Filter by Status", False, f"Failed with status {response.status_code}")
+                return False
+            
+            new_leads = response.json()
+            new_count = len([lead for lead in new_leads.get('leads', []) if lead.get('status') == 'New'])
+            if new_count < 1:
+                self.log_result("Filter by Status", False, f"Expected at least 1 New lead, got {new_count}")
+                return False
+            
+            self.log_result("Filter by Status", True, f"Found {new_count} New leads")
+            
+            # Test 4: Search by client name
+            response = requests.get(f"{self.base_url}/crm/leads?search=Alice", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Search by Name", False, f"Failed with status {response.status_code}")
+                return False
+            
+            search_results = response.json()
+            alice_found = any('Alice' in lead.get('client_name', '') for lead in search_results.get('leads', []))
+            if not alice_found:
+                self.log_result("Search by Name", False, "Alice not found in search results")
+                return False
+            
+            self.log_result("Search by Name", True, "Search by client name working")
+            
+            # Test 5: Pagination
+            response = requests.get(f"{self.base_url}/crm/leads?limit=2", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Pagination Test", False, f"Failed with status {response.status_code}")
+                return False
+            
+            paginated_data = response.json()
+            if len(paginated_data.get('leads', [])) > 2:
+                self.log_result("Pagination Test", False, f"Expected max 2 leads, got {len(paginated_data.get('leads', []))}")
+                return False
+            
+            self.log_result("Pagination Test", True, f"Pagination working - got {len(paginated_data.get('leads', []))} leads")
+            
+            self.log_result("Get Leads with Filters", True, "✅ All lead filtering and pagination tests passed")
+            return True
+            
+        except Exception as e:
+            self.log_result("Get Leads with Filters", False, f"Error: {str(e)}")
+            return False
+    
+    def test_update_lead_status_to_booked(self):
+        """Test Scenario 3: UPDATE Lead status to Booked (triggers auto-revenue creation)"""
+        try:
+            print("\n🔍 SCENARIO 3: UPDATE Lead status to Booked (Auto-Revenue Creation)")
+            
+            # First create a lead
+            lead_data = {
+                "client_name": "Revenue Test Client",
+                "primary_phone": "+91-9876543230",
+                "email": "revenue.test@example.com",
+                "lead_type": "Visa",
+                "source": "Referral",
+                "status": "New"
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Lead for Revenue Test", False, f"Failed with status {response.status_code}")
+                return False
+            
+            lead = response.json().get('lead')
+            lead_id = lead.get('_id')
+            
+            # Update status to Booked
+            update_data = {"status": "Booked"}
+            response = requests.put(f"{self.base_url}/crm/leads/{lead_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Update Lead to Booked", False, f"Failed with status {response.status_code}")
+                return False
+            
+            updated_lead = response.json().get('lead')
+            if updated_lead.get('status') != 'Booked':
+                self.log_result("Lead Status Update", False, f"Expected Booked, got {updated_lead.get('status')}")
+                return False
+            
+            self.log_result("Lead Status Update", True, "Lead status updated to Booked")
+            
+            # Verify revenue_id is populated
+            if not updated_lead.get('revenue_id'):
+                self.log_result("Revenue ID Population", False, "revenue_id not populated in lead")
+                return False
+            
+            self.log_result("Revenue ID Population", True, f"Revenue ID populated: {updated_lead.get('revenue_id')}")
+            
+            # Verify revenue entry created in revenues collection
+            time.sleep(2)  # Allow for revenue creation
+            response = requests.get(f"{self.base_url}/revenue", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get Revenues", False, f"Failed with status {response.status_code}")
+                return False
+            
+            revenues = response.json()
+            revenue_found = None
+            for revenue in revenues:
+                if revenue.get('client_name') == lead_data['client_name'] and revenue.get('service_type') == lead_data['lead_type']:
+                    revenue_found = revenue
+                    break
+            
+            if not revenue_found:
+                self.log_result("Auto-Revenue Creation", False, "Revenue entry not found in revenues collection")
+                return False
+            
+            # Verify revenue fields
+            if revenue_found.get('amount') != 0:
+                self.log_result("Revenue Amount", False, f"Expected 0, got {revenue_found.get('amount')}")
+                return False
+            
+            if revenue_found.get('status') != 'Pending':
+                self.log_result("Revenue Status", False, f"Expected Pending, got {revenue_found.get('status')}")
+                return False
+            
+            if revenue_found.get('lead_id') != lead.get('lead_id'):
+                self.log_result("Revenue Lead Linkage", False, f"Expected {lead.get('lead_id')}, got {revenue_found.get('lead_id')}")
+                return False
+            
+            self.log_result("Auto-Revenue Creation", True, "✅ Revenue entry auto-created with correct fields")
+            
+            # Test idempotency - update status to Booked again
+            response = requests.put(f"{self.base_url}/crm/leads/{lead_id}", json=update_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Idempotency Test Setup", False, f"Failed with status {response.status_code}")
+                return False
+            
+            # Check that no duplicate revenue was created
+            time.sleep(1)
+            response = requests.get(f"{self.base_url}/revenue", headers=self.headers)
+            revenues_after = response.json()
+            
+            duplicate_revenues = [r for r in revenues_after if r.get('client_name') == lead_data['client_name']]
+            if len(duplicate_revenues) > 1:
+                self.log_result("Idempotency Test", False, f"Duplicate revenue created - found {len(duplicate_revenues)} revenues")
+                return False
+            
+            self.log_result("Idempotency Test", True, "✅ No duplicate revenue created on second Booked update")
+            
+            self.log_result("Update Lead Status to Booked", True, "✅ Auto-revenue creation working correctly with idempotency")
+            return {"lead": updated_lead, "revenue": revenue_found}
+            
+        except Exception as e:
+            self.log_result("Update Lead Status to Booked", False, f"Error: {str(e)}")
+            return False
+    
     def test_update_revenue_modify_vendor_payments(self, revenue_id):
         """Test Scenario 2: UPDATE Revenue - Modify Vendor Payments"""
         try:
