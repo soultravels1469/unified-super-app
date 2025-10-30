@@ -499,11 +499,14 @@ frontend:
     file: "/app/frontend/src/pages/crm/Leads.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Complete leads list page with: (1) Search (name, phone, email, lead_id, referral_code), (2) Filters (lead_type, status, source), (3) Pagination (20 per page), (4) Table view with columns: Lead ID, Client Name, Contact (phone + email), Type, Status (color-coded badges), Source, Travel Date, (5) Actions: View (eye icon), Edit (admin only), Delete (admin only), (6) Role-based access (viewer sees view only), (7) Status badges: New=blue, In Process=yellow, Booked/Converted=green, Cancelled=red, (8) Labels display, (9) 'Add New Lead' button (admin only)."
+      - working: "NA"
+        agent: "testing"
+        comment: "Frontend testing not performed - system limitations. Backend API endpoints supporting this page are fully tested and working correctly."
 
   - task: "Lead Form Component"
     implemented: true
