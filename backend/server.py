@@ -33,6 +33,7 @@ db = client[os.environ['DB_NAME']]
 # Initialize services
 accounting = AccountingService(db)
 activity_logger = ActivityLogger(db)
+backup_service = BackupService(db, activity_logger)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
