@@ -510,7 +510,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Vendor Partial Payment Tracking and Ledger Sync"
+    - "CRM Lead CRUD endpoints"
+    - "CRM Auto-Revenue Creation when Lead Booked"
+    - "CRM Document Upload endpoints"
+    - "CRM Reminders CRUD endpoints"
+    - "CRM Dashboard Analytics endpoints"
+    - "Leads List Page"
+    - "Lead Form Component"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
