@@ -156,14 +156,6 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     const newRows = [...costRows];
     newRows[index][field] = value;
 
-    // Auto-update phone when vendor changes
-    if (field === 'vendor_name') {
-      const selectedVendor = vendors.find(v => v.vendor_name === value);
-      if (selectedVendor) {
-        newRows[index].vendor_phone = selectedVendor.phone || '';
-      }
-    }
-
     // Auto-calculate pending and update status
     if (field === 'vendor_payments') {
       const totalPaid = value.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
