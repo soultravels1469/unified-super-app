@@ -546,13 +546,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "CRM Lead CRUD endpoints"
-    - "CRM Auto-Revenue Creation when Lead Booked"
-    - "CRM Document Upload endpoints"
-    - "CRM Reminders CRUD endpoints"
-    - "CRM Dashboard Analytics endpoints"
-    - "Leads List Page"
-    - "Lead Form Component"
+    - "Revenue endpoint legacy data handling fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
