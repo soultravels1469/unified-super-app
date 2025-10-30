@@ -10,8 +10,8 @@ class BackupService:
     def __init__(self, db, activity_logger):
         self.db = db
         self.activity_logger = activity_logger
-        self.backup_dir = Path("/app/backend/backups")
-        self.backup_dir.mkdir(exist_ok=True)
+        self.backup_dir = Path(__file__).resolve().parent / "backups"
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
         self.max_backups = 7
         
     async def create_backup(self, user: str = "system", backup_type: str = "automatic") -> Dict:
