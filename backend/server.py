@@ -1375,6 +1375,19 @@ async def rebuild_accounting_data():
 # Include the router in the main app
 app.include_router(api_router)
 
+# Setup CRM routes with DB dependency
+def get_db():
+    return db
+
+# Override CRM controller dependency
+def get_crm_controller_override():
+    return CRMController(db)
+
+crm_routes.router.dependency_overrides[crm_routes.get_crm_controller] = get_crm_controller_override
+
+# Include CRM routes
+app.include_router(crm_routes.router)
+
 # Mount uploads directory for serving files
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
