@@ -328,22 +328,118 @@ class CRMFinanceIntegrationTester:
             self.log_result("CRM-Finance Sync", False, f"Error: {str(e)}")
             return False
     
-    def get_revenue(self, revenue_id):
-        """Get specific revenue by ID"""
+    # ===== PRIMARY TEST 3: UPCOMING TRAVELS DASHBOARD =====
+    
+    def test_upcoming_travels_dashboard(self):
+        """
+        PRIMARY TEST 3: Upcoming Travels Dashboard
+        GET /api/crm/upcoming-travels-dashboard - create lead with travel_date in next 15 days, verify it appears
+        """
         try:
-            response = requests.get(f"{self.base_url}/revenue", headers=self.headers)
+            print("\n🔍 PRIMARY TEST 3: Upcoming Travels Dashboard")
+            
+            # Step 1: Create lead with travel_date in next 15 days
+            travel_date = datetime.now(timezone.utc) + timedelta(days=10)  # 10 days from now
+            
+            lead_data = {
+                "client_name": "Upcoming Travel Client",
+                "primary_phone": "+91-9876543300",
+                "email": "travel@example.com",
+                "lead_type": "Package",
+                "source": "Instagram",
+                "status": "Booked",  # Must be booked to appear in upcoming travels
+                "travel_date": travel_date.isoformat()
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Travel Lead", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            lead = response.json().get('lead')
+            lead_code = lead.get('lead_id')
+            
+            self.log_result("Create Travel Lead", True, f"✅ Travel lead created: {lead_code} with travel date: {travel_date.strftime('%Y-%m-%d')}")
+            
+            # Step 2: Test upcoming travels dashboard endpoint
+            response = requests.get(f"{self.base_url}/crm/upcoming-travels-dashboard", headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Upcoming Travels Dashboard", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            upcoming_travels = response.json()
+            
+            if not isinstance(upcoming_travels, list):
+                self.log_result("Dashboard Response Type", False, f"Expected list, got {type(upcoming_travels)}")
+                return False
+            
+            self.log_result("Dashboard Response Type", True, f"✅ Dashboard returned list with {len(upcoming_travels)} entries")
+            
+            # Step 3: Verify our lead appears in upcoming travels
+            travel_lead_found = None
+            for travel_lead in upcoming_travels:
+                if travel_lead.get('lead_id') == lead_code:
+                    travel_lead_found = travel_lead
+                    break
+            
+            if not travel_lead_found:
+                self.log_result("Travel Lead in Dashboard", False, f"Lead {lead_code} not found in upcoming travels")
+                return False
+            
+            # Step 4: Validate travel lead data
+            validations = [
+                ("client_name", travel_lead_found.get('client_name'), lead_data['client_name']),
+                ("lead_type", travel_lead_found.get('lead_type'), lead_data['lead_type']),
+                ("status", travel_lead_found.get('status'), "Booked"),
+                ("travel_date", travel_lead_found.get('travel_date')[:10], travel_date.strftime('%Y-%m-%d'))  # Compare date part only
+            ]
+            
+            for field, actual, expected in validations:
+                if actual != expected:
+                    self.log_result(f"Travel Lead {field}", False, f"Expected {expected}, got {actual}")
+                    return False
+            
+            self.log_result("Travel Lead in Dashboard", True, f"✅ Travel lead found in dashboard with correct data")
+            
+            # Step 5: Test edge case - create lead with travel date > 30 days (should not appear)
+            future_date = datetime.now(timezone.utc) + timedelta(days=35)
+            
+            future_lead_data = {
+                "client_name": "Future Travel Client",
+                "primary_phone": "+91-9876543301",
+                "email": "future@example.com",
+                "lead_type": "Visa",
+                "source": "Website",
+                "status": "Booked",
+                "travel_date": future_date.isoformat()
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=future_lead_data, headers=self.headers)
             if response.status_code == 200:
-                revenues = response.json()
-                for rev in revenues:
-                    if rev.get('id') == revenue_id:
-                        return rev
-                return None
-            else:
-                self.log_result("Get Revenue", False, f"Failed with status {response.status_code}", response.text)
-                return None
+                future_lead = response.json().get('lead')
+                future_lead_code = future_lead.get('lead_id')
+                
+                # Check dashboard again
+                time.sleep(1)
+                response = requests.get(f"{self.base_url}/crm/upcoming-travels-dashboard", headers=self.headers)
+                updated_travels = response.json()
+                
+                future_found = any(t.get('lead_id') == future_lead_code for t in updated_travels)
+                if future_found:
+                    self.log_result("Future Travel Filter", False, f"Lead with travel date > 30 days appeared in dashboard")
+                    return False
+                
+                self.log_result("Future Travel Filter", True, "✅ Lead with travel date > 30 days correctly filtered out")
+            
+            self.log_result("Upcoming Travels Dashboard", True, f"✅ Dashboard working correctly - shows leads with travel dates in next 30 days")
+            
+            return {"upcoming_travels": upcoming_travels, "travel_lead": travel_lead_found}
+            
         except Exception as e:
-            self.log_result("Get Revenue", False, f"Error: {str(e)}")
-            return None
+            self.log_result("Upcoming Travels Dashboard", False, f"Error: {str(e)}")
+            return False
     
     def get_admin_settings(self):
         """Get admin settings"""
