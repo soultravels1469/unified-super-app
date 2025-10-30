@@ -354,15 +354,18 @@ backend:
 
   - task: "CRM Document Upload endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/crm/routes.py, /app/backend/crm/utils.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented document management: POST /api/crm/leads/:id/upload (upload file), GET /api/crm/leads/:id/docs/download (download), DELETE /api/crm/leads/:id/docs (delete). Validation: file types (PDF, JPG, PNG, DOCX), size ≤ 3MB. Files saved to /uploads/crm/{lead_id}/ with timestamp prefix. Document metadata stored in lead.documents array (file_name, file_path, uploaded_at, size)."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All document operations working correctly with proper validations. Verified: (1) UPLOAD - PDF file uploaded successfully to /uploads/crm/{lead_id}/ with timestamp prefix, metadata stored in lead.documents array, (2) DOWNLOAD - file accessible via GET endpoint with correct content-type, (3) DELETE - file and metadata removed successfully, (4) VALIDATIONS - file size >3MB correctly rejected (400), invalid file types (.exe) correctly rejected (400), only allowed types (PDF, JPG, PNG, DOCX) accepted. Complete document lifecycle management working perfectly."
 
   - task: "CRM Reminders CRUD endpoints"
     implemented: true
