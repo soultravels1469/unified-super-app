@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API } from '../App';
 import { toast } from 'sonner';
-import { X, Plus, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronUp, AlertCircle, DollarSign, Users, Calendar, CreditCard } from 'lucide-react';
+
+const PAYMENT_MODES = ["Cash", "Bank Transfer", "UPI", "Cheque", "Debit Card", "Credit Card", "Pending"];
 
 function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
-  // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => new Date().toISOString().split('T')[0];
   
   const [formData, setFormData] = useState({
@@ -19,7 +20,9 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     status: 'Pending',
     notes: '',
     cost_price_details: [],
-    partial_payments: []
+    partial_payments: [],
+    travel_start_date: null,
+    lead_id: null
   });
 
   const [vendors, setVendors] = useState([]);
@@ -38,17 +41,35 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
       setCostRows(revenue.cost_price_details || []);
       const payments = revenue.partial_payments || [];
       setPartialPayments(payments);
-      // Keep expanded if there are any payments, and force open if > 1
       setShowPartialPayments(payments.length > 0);
+      
+      // Fetch travel date from CRM if lead_id exists
+      if (revenue.lead_id) {
+        fetchTravelDate(revenue.lead_id);
+      }
     }
   }, [revenue]);
 
-  // Auto-expand partial payments if count > 1
+  // Force expand if > 1 partial payment
   useEffect(() => {
     if (partialPayments.length > 1) {
       setShowPartialPayments(true);
     }
   }, [partialPayments.length]);
+
+  const fetchTravelDate = async (leadId) => {
+    try {
+      const response = await axios.get(`${API}/crm/leads?search=${leadId}`);
+      if (response.data && response.data.leads && response.data.leads.length > 0) {
+        const lead = response.data.leads[0];
+        if (lead.travel_date) {
+          setFormData(prev => ({ ...prev, travel_start_date: lead.travel_date }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch travel date');
+    }
+  };
 
   const fetchVendors = async () => {
     try {
@@ -68,7 +89,6 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     }
   };
 
-  // Real-time calculation with validation
   const validateAndCalculate = (salePrice, receivedAmount, pendingAmount, changedField) => {
     const s = parseFloat(salePrice) || 0;
     const x = parseFloat(receivedAmount) || 0;
@@ -78,7 +98,6 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     let newPending = y;
     let error = '';
 
-    // Auto-calculate based on which field changed
     if (changedField === 'sale_price') {
       newPending = s - x;
     } else if (changedField === 'received_amount') {
@@ -87,7 +106,6 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
       newReceived = s - y;
     }
 
-    // Validation: x + y should equal s
     if (Math.abs((newReceived + newPending) - s) > 0.01 && s > 0) {
       error = `⚠️ Mismatch: Received (₹${newReceived}) + Pending (₹${newPending}) ≠ Sale Price (₹${s})`;
     }
@@ -101,102 +119,93 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     };
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    
-    let updatedData = { ...formData, [name]: value };
+  const handleChange = (field, value, changedField = null) => {
+    let updates = { [field]: value };
 
-    // Auto-calculation for financial fields
-    if (['sale_price', 'received_amount', 'pending_amount'].includes(name)) {
+    if (['sale_price', 'received_amount', 'pending_amount'].includes(field)) {
       const calculated = validateAndCalculate(
-        name === 'sale_price' ? value : formData.sale_price,
-        name === 'received_amount' ? value : formData.received_amount,
-        name === 'pending_amount' ? value : formData.pending_amount,
-        name
+        field === 'sale_price' ? value : formData.sale_price,
+        field === 'received_amount' ? value : formData.received_amount,
+        field === 'pending_amount' ? value : formData.pending_amount,
+        changedField || field
       );
-      updatedData = { ...updatedData, ...calculated };
+      updates = { ...updates, ...calculated };
     }
 
-    setFormData(updatedData);
+    setFormData({ ...formData, ...updates });
   };
 
-  // Cost Row Management
   const addCostRow = () => {
     setCostRows([...costRows, {
-      id: `temp_${Date.now()}`,
-      vendor_name: '',
-      category: 'Hotel',
+      id: `cost_${Date.now()}`,
+      vendor_name: vendors[0]?.vendor_name || '',
+      vendor_phone: vendors[0]?.phone || '',
       amount: 0,
-      payment_date: formData.date || getTodayDate(),
-      payment_status: 'Done',
-      pending_amount: 0,
-      due_date: '',
-      notes: '',
-      vendor_payments: [] // For tracking vendor partial payments
+      payment_status: 'Pending',
+      vendor_payments: []
     }]);
   };
 
   const removeCostRow = (index) => {
-    const newRows = costRows.filter((_, i) => i !== index);
-    setCostRows(newRows);
+    setCostRows(costRows.filter((_, i) => i !== index));
   };
 
   const updateCostRow = (index, field, value) => {
     const newRows = [...costRows];
     newRows[index][field] = value;
-    
-    // If payment status changes to "Pending", ensure pending_amount and due_date are filled
-    if (field === 'payment_status' && value === 'Pending') {
-      if (!newRows[index].pending_amount) {
-        newRows[index].pending_amount = newRows[index].amount;
+
+    // Auto-update phone when vendor changes
+    if (field === 'vendor_name') {
+      const selectedVendor = vendors.find(v => v.vendor_name === value);
+      if (selectedVendor) {
+        newRows[index].vendor_phone = selectedVendor.phone || '';
       }
     }
-    
+
+    // Auto-calculate pending and update status
+    if (field === 'vendor_payments') {
+      const totalPaid = value.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const totalPayable = parseFloat(newRows[index].amount) || 0;
+      const pending = totalPayable - totalPaid;
+      
+      // Auto-update status when pending = 0
+      if (pending <= 0.01 && totalPayable > 0) {
+        newRows[index].payment_status = 'Done';
+      } else {
+        newRows[index].payment_status = 'Pending';
+      }
+    }
+
     setCostRows(newRows);
   };
 
-  // Vendor Payment Management
   const addVendorPayment = (costIndex) => {
     const newRows = [...costRows];
-    if (!newRows[costIndex].vendor_payments) {
-      newRows[costIndex].vendor_payments = [];
-    }
-    newRows[costIndex].vendor_payments.push({
-      id: `v_payment_${Date.now()}`,
-      amount: 0,
+    const vendorPayments = newRows[costIndex].vendor_payments || [];
+    vendorPayments.push({
+      id: `vpayment_${Date.now()}`,
       date: getTodayDate(),
-      payment_mode: 'Bank Transfer'
+      amount: 0,
+      mode: 'Pending',  // Default mode
+      transaction_number: '',
+      bank_name: bankAccounts[0]?.bank_name || ''
     });
-    setCostRows(newRows);
-  };
-
-  const updateVendorPayment = (costIndex, paymentIndex, field, value) => {
-    const newRows = [...costRows];
-    newRows[costIndex].vendor_payments[paymentIndex][field] = value;
-    setCostRows(newRows);
+    newRows[costIndex].vendor_payments = vendorPayments;
+    updateCostRow(costIndex, 'vendor_payments', vendorPayments);
   };
 
   const removeVendorPayment = (costIndex, paymentIndex) => {
     const newRows = [...costRows];
     newRows[costIndex].vendor_payments = newRows[costIndex].vendor_payments.filter((_, i) => i !== paymentIndex);
-    setCostRows(newRows);
+    updateCostRow(costIndex, 'vendor_payments', newRows[costIndex].vendor_payments);
   };
 
-  const calculateVendorPaymentStatus = (row) => {
-    const totalPayable = parseFloat(row.amount) || 0;
-    const vendorPayments = row.vendor_payments || [];
-    const totalPaid = vendorPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    const remaining = totalPayable - totalPaid;
-    
-    return {
-      totalPayable,
-      totalPaid,
-      remaining,
-      isSettled: remaining <= 0.01 && totalPaid > 0
-    };
+  const updateVendorPayment = (costIndex, paymentIndex, field, value) => {
+    const newRows = [...costRows];
+    newRows[costIndex].vendor_payments[paymentIndex][field] = value;
+    updateCostRow(costIndex, 'vendor_payments', newRows[costIndex].vendor_payments);
   };
 
-  // Partial Payment Management
   const addPartialPayment = () => {
     setPartialPayments([...partialPayments, {
       id: `payment_${Date.now()}`,
@@ -204,6 +213,7 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
       amount: 0,
       bank_name: bankAccounts[0]?.bank_name || '',
       payment_mode: 'Bank Transfer',
+      transaction_number: '',
       notes: ''
     }]);
     setShowPartialPayments(true);
@@ -219,7 +229,6 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     newPayments[index][field] = value;
     setPartialPayments(newPayments);
 
-    // Auto-update received amount based on partial payments
     const totalPartialPayments = newPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     const calculated = validateAndCalculate(
       formData.sale_price,
@@ -282,50 +291,76 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
-      overflow: 'auto',
       padding: '1rem'
     }}>
       <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '2rem',
-        width: '95%',
-        maxWidth: '1200px',
+        backgroundColor: 'white',
+        borderRadius: '0.5rem',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+        width: '100%',
+        maxWidth: '900px',
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>
-            {revenue ? 'Edit Revenue' : 'Add Revenue'} - Complete Tracking
+        {/* Header */}
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>
+            {revenue ? 'Edit Revenue' : 'Add Revenue'}
           </h2>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0.5rem' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Basic Info Section */}
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', color: '#1a202c' }}>Basic Information</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              <div className="form-group">
-                <label>Date *</label>
-                <input type="date" name="date" value={formData.date} onChange={handleChange} required />
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          {/* Revenue Details Section - Light Blue */}
+          <div style={{ backgroundColor: '#eff6ff', padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid #dbeafe' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <DollarSign size={20} style={{ color: '#3b82f6' }} />
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#1e40af' }}>Revenue Details</h3>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleChange('date', e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                />
               </div>
 
-              <div className="form-group">
-                <label>Client Name *</label>
-                <input type="text" name="client_name" value={formData.client_name} onChange={handleChange} required />
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Client Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.client_name}
+                  onChange={(e) => handleChange('client_name', e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                />
               </div>
 
-              <div className="form-group">
-                <label>Source *</label>
-                <select name="source" value={formData.source} onChange={handleChange} required>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Service Type *
+                </label>
+                <select
+                  value={formData.source}
+                  onChange={(e) => handleChange('source', e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                >
                   <option value="Visa">Visa</option>
                   <option value="Ticket">Ticket</option>
                   <option value="Package">Package</option>
@@ -333,633 +368,339 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>Sale Price (₹) *</label>
-                <input 
-                  type="number" 
-                  name="sale_price" 
-                  value={formData.sale_price} 
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  required 
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Sale Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  value={formData.sale_price}
+                  onChange={(e) => handleChange('sale_price', parseFloat(e.target.value) || 0, 'sale_price')}
+                  required
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Received Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  value={formData.received_amount}
+                  onChange={(e) => handleChange('received_amount', parseFloat(e.target.value) || 0, 'received_amount')}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Pending Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  value={formData.pending_amount}
+                  onChange={(e) => handleChange('pending_amount', parseFloat(e.target.value) || 0, 'pending_amount')}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Payment Details Section */}
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', color: '#1a202c' }}>Payment Details</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              <div className="form-group">
-                <label>Received Amount (₹)</label>
-                <input 
-                  type="number" 
-                  name="received_amount" 
-                  value={formData.received_amount} 
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Payment Mode</label>
-                <select name="payment_mode" value={formData.payment_mode} onChange={handleChange}>
-                  <option value="Cash">Cash</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Cheque">Cheque</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Pending Amount (₹)</label>
-                <input 
-                  type="number" 
-                  name="pending_amount" 
-                  value={formData.pending_amount} 
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  readOnly
-                  style={{ background: '#f3f4f6' }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Status</label>
-                <div style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '6px',
-                  fontWeight: 600,
-                  textAlign: 'center',
-                  background: formData.status === 'Completed' ? '#d1fae5' : '#fed7aa',
-                  color: formData.status === 'Completed' ? '#065f46' : '#9a3412'
-                }}>
-                  {formData.status}
-                </div>
-              </div>
-            </div>
-
-            {/* Validation Error */}
             {validationError && (
-              <div style={{ 
-                marginTop: '1rem',
-                padding: '0.75rem',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: '#991b1b'
-              }}>
-                <AlertCircle size={18} />
-                <span>{validationError}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.375rem' }}>
+                <AlertCircle size={18} style={{ color: '#dc2626' }} />
+                <span style={{ fontSize: '0.875rem', color: '#dc2626' }}>{validationError}</span>
               </div>
             )}
           </div>
 
-          {/* Partial Payments Section */}
-          {formData.pending_amount > 0 && (
-            <div style={{ marginBottom: '2rem' }}>
-              <div 
-                onClick={() => {
-                  // Only allow collapse if there's 1 or 0 payments
-                  if (partialPayments.length <= 1) {
-                    setShowPartialPayments(!showPartialPayments);
-                  }
-                }}
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  cursor: partialPayments.length <= 1 ? 'pointer' : 'default',
-                  padding: '1rem',
-                  background: '#f0f9ff',
-                  borderRadius: '8px',
-                  marginBottom: '1rem'
-                }}
-              >
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
-                  Partial Payments ({partialPayments.length})
-                  {partialPayments.length > 1 && <span style={{ fontSize: '0.875rem', fontWeight: 400, marginLeft: '0.5rem', color: '#64748b' }}>(Permanently Expanded)</span>}
-                </h3>
-                {partialPayments.length <= 1 && (showPartialPayments ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
+          {/* Travel Info Section - Light Gray */}
+          {formData.travel_start_date && (
+            <div style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <Calendar size={20} style={{ color: '#6b7280' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#374151' }}>Travel Information (from CRM)</h3>
               </div>
-
-              {showPartialPayments && (
-                <div style={{ padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-                  <button 
-                    type="button"
-                    onClick={addPartialPayment}
-                    className="btn btn-secondary"
-                    style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                  >
-                    <Plus size={16} />
-                    Add Partial Payment
-                  </button>
-
-                  {partialPayments.length > 0 && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>Payment History:</h4>
-                      {partialPayments.map((payment, index) => {
-                        // Calculate running balance
-                        const previousPayments = partialPayments.slice(0, index + 1);
-                        const totalPaidSoFar = previousPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-                        const remainingBalance = parseFloat(formData.sale_price || 0) - totalPaidSoFar;
-                        
-                        return (
-                          <div key={payment.id} style={{ 
-                            marginBottom: '1rem',
-                            padding: '1rem',
-                            background: '#f9fafb',
-                            borderRadius: '8px',
-                            border: '1px solid #e5e7eb'
-                          }}>
-                            {/* Payment Summary Line */}
-                            <div style={{ 
-                              fontSize: '0.875rem', 
-                              fontWeight: 600, 
-                              marginBottom: '0.75rem',
-                              color: '#1e293b',
-                              padding: '0.5rem',
-                              background: '#e0f2fe',
-                              borderRadius: '6px'
-                            }}>
-                              #{index + 1} ₹{(parseFloat(payment.amount) || 0).toLocaleString()} via {payment.payment_mode} - {payment.date} | Remaining: ₹{remainingBalance.toLocaleString()}
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr auto', gap: '0.75rem', alignItems: 'end' }}>
-                              <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ fontSize: '0.875rem' }}>Date</label>
-                                <input
-                                  type="date"
-                                  value={payment.date}
-                                  onChange={(e) => updatePartialPayment(index, 'date', e.target.value)}
-                                  required
-                                />
-                              </div>
-
-                              <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ fontSize: '0.875rem' }}>Amount (₹)</label>
-                                <input
-                                  type="number"
-                                  value={payment.amount}
-                                  onChange={(e) => updatePartialPayment(index, 'amount', parseFloat(e.target.value) || 0)}
-                                  min="0"
-                                  step="0.01"
-                                  required
-                                />
-                              </div>
-
-                              <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ fontSize: '0.875rem' }}>Bank</label>
-                                <select
-                                  value={payment.bank_name}
-                                  onChange={(e) => updatePartialPayment(index, 'bank_name', e.target.value)}
-                                >
-                                  <option value="">Select Bank</option>
-                                  {bankAccounts.map(bank => (
-                                    <option key={bank.id} value={bank.bank_name}>{bank.bank_name}</option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ fontSize: '0.875rem' }}>Payment Mode</label>
-                                <select
-                                  value={payment.payment_mode}
-                                  onChange={(e) => updatePartialPayment(index, 'payment_mode', e.target.value)}
-                                >
-                                  <option value="Cash">Cash</option>
-                                  <option value="Bank Transfer">Bank Transfer</option>
-                                  <option value="UPI">UPI</option>
-                                  <option value="Cheque">Cheque</option>
-                                </select>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => removePartialPayment(index)}
-                                style={{ 
-                                  border: 'none',
-                                  background: '#ef4444',
-                                  color: 'white',
-                                  padding: '0.5rem',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Running Total Summary */}
-                  <div style={{ 
-                    marginTop: '1rem',
-                    padding: '1rem',
-                    background: '#f0fdf4',
-                    borderRadius: '8px',
-                    border: '1px solid #86efac'
-                  }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontWeight: 600 }}>
-                      <div>
-                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Received</div>
-                        <div style={{ fontSize: '1.1rem', color: '#10b981' }}>
-                          ₹{partialPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Balance Remaining</div>
-                        <div style={{ fontSize: '1.1rem', color: '#ef4444' }}>
-                          ₹{(parseFloat(formData.sale_price || 0) - partialPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)).toLocaleString()}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Payment Count</div>
-                        <div style={{ fontSize: '1.1rem', color: '#6366f1' }}>
-                          {partialPayments.length} payments
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: '#374151' }}>
+                  Travel Start Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.travel_start_date ? new Date(formData.travel_start_date).toISOString().split('T')[0] : ''}
+                  readOnly
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', backgroundColor: '#f3f4f6' }}
+                />
+              </div>
             </div>
           )}
 
-          {/* Profit Summary */}
-          <div style={{ 
-            background: '#f0f9ff', 
-            padding: '1rem', 
-            borderRadius: '8px', 
-            marginBottom: '2rem',
-            border: '1px solid #bae6fd'
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Sale Price</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#10b981' }}>
-                  ₹{parseFloat(formData.sale_price || 0).toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Cost</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#ef4444' }}>
-                  ₹{totalCost.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Profit</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: profit >= 0 ? '#10b981' : '#ef4444' }}>
-                  ₹{profit.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Profit %</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: profit >= 0 ? '#10b981' : '#ef4444' }}>
-                  {profitMargin}%
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Vendor Cost Breakdown */}
-          <div style={{ marginBottom: '2rem' }}>
+          {/* Vendor Breakdown Section - Light Green */}
+          <div style={{ backgroundColor: '#f0fdf4', padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid #dcfce7' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Vendor Cost Breakdown</h3>
-              <button 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={20} style={{ color: '#16a34a' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#15803d' }}>Vendor Breakdown</h3>
+              </div>
+              <button
                 type="button"
                 onClick={addCostRow}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}
               >
-                <Plus size={16} />
-                Add Vendor Cost
+                <Plus size={18} />
+                Add Vendor
               </button>
             </div>
 
-            <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>
-              💡 Each cost entry auto-creates Expense records and syncs with vendor ledger
-            </p>
+            {costRows.map((row, index) => {
+              const totalPaid = (row.vendor_payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+              const pendingAmount = (parseFloat(row.amount) || 0) - totalPaid;
 
-            {costRows.length > 0 ? (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {costRows.map((row, index) => (
-                  <div key={row.id || index} style={{ 
-                    border: '1px solid #e5e7eb', 
-                    borderRadius: '8px', 
-                    padding: '1rem',
-                    background: '#f9fafb'
-                  }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr auto', gap: '0.75rem', alignItems: 'end', marginBottom: '0.75rem' }}>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.875rem' }}>Vendor *</label>
-                        <select
-                          value={row.vendor_name}
-                          onChange={(e) => updateCostRow(index, 'vendor_name', e.target.value)}
-                          required
+              return (
+                <div key={row.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #d1fae5' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <span style={{ fontWeight: '600', color: '#16a34a', fontSize: '1rem' }}>Vendor #{index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCostRow(index)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Vendor Name</label>
+                      <select
+                        value={row.vendor_name}
+                        onChange={(e) => updateCostRow(index, 'vendor_name', e.target.value)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                      >
+                        <option value="">Select Vendor</option>
+                        {vendors.map((v) => (
+                          <option key={v._id} value={v.vendor_name}>{v.vendor_name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Phone</label>
+                      <input
+                        type="text"
+                        value={row.vendor_phone || ''}
+                        onChange={(e) => updateCostRow(index, 'vendor_phone', e.target.value)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Amount Payable (₹)</label>
+                      <input
+                        type="number"
+                        value={row.amount}
+                        onChange={(e) => updateCostRow(index, 'amount', parseFloat(e.target.value) || 0)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Pending Amount (₹)</label>
+                      <input
+                        type="number"
+                        value={pendingAmount.toFixed(2)}
+                        readOnly
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', backgroundColor: '#f3f4f6', fontWeight: '600', color: pendingAmount > 0 ? '#dc2626' : '#16a34a' }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => addVendorPayment(index)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                  >
+                    <Plus size={16} />
+                    Add Payment
+                  </button>
+
+                  {(row.vendor_payments || []).map((payment, pIdx) => (
+                    <div key={payment.id} style={{ backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '0.375rem', marginTop: '0.75rem', border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Date</label>
+                          <input
+                            type="date"
+                            value={payment.date}
+                            onChange={(e) => updateVendorPayment(index, pIdx, 'date', e.target.value)}
+                            style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Amount</label>
+                          <input
+                            type="number"
+                            value={payment.amount}
+                            onChange={(e) => updateVendorPayment(index, pIdx, 'amount', parseFloat(e.target.value) || 0)}
+                            style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Mode</label>
+                          <select
+                            value={payment.mode}
+                            onChange={(e) => updateVendorPayment(index, pIdx, 'mode', e.target.value)}
+                            style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          >
+                            {PAYMENT_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
+                          </select>
+                        </div>
+
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Check/Transaction Number</label>
+                          <input
+                            type="text"
+                            value={payment.transaction_number || ''}
+                            onChange={(e) => updateVendorPayment(index, pIdx, 'transaction_number', e.target.value)}
+                            placeholder="Optional"
+                            style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeVendorPayment(index, pIdx)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '0.375rem' }}
                         >
-                          <option value="">Select Vendor</option>
-                          {vendors.map(vendor => (
-                            <option key={vendor.id} value={vendor.vendor_name}>{vendor.vendor_name}</option>
-                          ))}
-                        </select>
+                          <Trash2 size={16} />
+                        </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
 
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.875rem' }}>Category</label>
-                        <select
-                          value={row.category}
-                          onChange={(e) => updateCostRow(index, 'category', e.target.value)}
-                        >
-                          <option value="Hotel">Hotel</option>
-                          <option value="Flight">Flight</option>
-                          <option value="Land">Land</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
+          {/* Partial Payments Section - Light Yellow */}
+          <div style={{ backgroundColor: '#fefce8', padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid #fef08a' }}>
+            <div
+              onClick={() => setShowPartialPayments(!showPartialPayments)}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showPartialPayments ? '1rem' : 0 }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CreditCard size={20} style={{ color: '#ca8a04' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: '#a16207' }}>Partial Payments ({partialPayments.length})</h3>
+              </div>
+              {partialPayments.length <= 1 ? (
+                showPartialPayments ? <ChevronUp size={20} /> : <ChevronDown size={20} />
+              ) : null}
+            </div>
 
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.875rem' }}>Amount (₹) *</label>
-                        <input
-                          type="number"
-                          value={row.amount}
-                          onChange={(e) => updateCostRow(index, 'amount', parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
-                          required
-                        />
-                      </div>
+            {showPartialPayments && (
+              <>
+                <button
+                  type="button"
+                  onClick={addPartialPayment}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#ca8a04', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', marginBottom: '1rem' }}
+                >
+                  <Plus size={18} />
+                  Add Partial Payment
+                </button>
 
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.875rem' }}>Payment Date</label>
+                {partialPayments.map((payment, index) => (
+                  <div key={payment.id} style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '0.375rem', marginBottom: '0.75rem', border: '1px solid #fde047' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Date</label>
                         <input
                           type="date"
-                          value={row.payment_date}
-                          onChange={(e) => updateCostRow(index, 'payment_date', e.target.value)}
+                          value={payment.date}
+                          onChange={(e) => updatePartialPayment(index, 'date', e.target.value)}
+                          style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         />
                       </div>
 
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.875rem' }}>Payment Status</label>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Amount</label>
+                        <input
+                          type="number"
+                          value={payment.amount}
+                          onChange={(e) => updatePartialPayment(index, 'amount', parseFloat(e.target.value) || 0)}
+                          style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Mode</label>
                         <select
-                          value={row.payment_status}
-                          onChange={(e) => updateCostRow(index, 'payment_status', e.target.value)}
+                          value={payment.payment_mode}
+                          onChange={(e) => updatePartialPayment(index, 'payment_mode', e.target.value)}
+                          style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         >
-                          <option value="Done">Done</option>
-                          <option value="Pending">Pending</option>
+                          {PAYMENT_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
                         </select>
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>Check/Transaction Number</label>
+                        <input
+                          type="text"
+                          value={payment.transaction_number || ''}
+                          onChange={(e) => updatePartialPayment(index, 'transaction_number', e.target.value)}
+                          placeholder="Optional"
+                          style={{ width: '100%', padding: '0.375rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        />
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => removeCostRow(index)}
-                        style={{ 
-                          border: 'none',
-                          background: '#ef4444',
-                          color: 'white',
-                          padding: '0.5rem',
-                          borderRadius: '6px',
-                          cursor: 'pointer'
-                        }}
+                        onClick={() => removePartialPayment(index)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '0.375rem' }}
                       >
                         <Trash2 size={16} />
                       </button>
                     </div>
-
-                    {/* Pending Payment Details */}
-                    {row.payment_status === 'Pending' && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #e5e7eb' }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem', color: '#ef4444' }}>Pending Amount (₹)</label>
-                          <input
-                            type="number"
-                            value={row.pending_amount || 0}
-                            onChange={(e) => updateCostRow(index, 'pending_amount', parseFloat(e.target.value) || 0)}
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem', color: '#ef4444' }}>Due Date</label>
-                          <input
-                            type="date"
-                            value={row.due_date || ''}
-                            onChange={(e) => updateCostRow(index, 'due_date', e.target.value)}
-                          />
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.875rem' }}>Notes</label>
-                          <input
-                            type="text"
-                            value={row.notes || ''}
-                            onChange={(e) => updateCostRow(index, 'notes', e.target.value)}
-                            placeholder="Payment pending notes..."
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Vendor Partial Payments Breakdown */}
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '2px solid #e5e7eb' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
-                          Vendor Payment Breakdown
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => addVendorPayment(index)}
-                          className="btn"
-                          style={{ 
-                            padding: '0.25rem 0.75rem', 
-                            fontSize: '0.875rem',
-                            background: '#10b981',
-                            color: 'white',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                        >
-                          <Plus size={14} />
-                          Add Payment
-                        </button>
-                      </div>
-
-                      {(() => {
-                        const paymentStatus = calculateVendorPaymentStatus(row);
-                        const vendorPayments = row.vendor_payments || [];
-
-                        return (
-                          <>
-                            {/* Payment Status Summary */}
-                            <div style={{ 
-                              padding: '0.75rem',
-                              background: paymentStatus.isSettled ? '#d1fae5' : '#fef3c7',
-                              borderRadius: '6px',
-                              marginBottom: '0.75rem',
-                              border: `1px solid ${paymentStatus.isSettled ? '#86efac' : '#fde68a'}`
-                            }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', fontSize: '0.875rem' }}>
-                                <div>
-                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Payable</div>
-                                  <div style={{ fontWeight: 600, color: '#1e293b' }}>₹{paymentStatus.totalPayable.toLocaleString()}</div>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Paid</div>
-                                  <div style={{ fontWeight: 600, color: '#10b981' }}>₹{paymentStatus.totalPaid.toLocaleString()}</div>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Remaining</div>
-                                  <div style={{ fontWeight: 600, color: '#ef4444' }}>₹{paymentStatus.remaining.toLocaleString()}</div>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748b', fontWeight: 500 }}>Status</div>
-                                  <div style={{ 
-                                    fontWeight: 600,
-                                    color: paymentStatus.isSettled ? '#065f46' : '#92400e'
-                                  }}>
-                                    {paymentStatus.isSettled ? '✓ Settled' : '⏳ Pending'}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Payment Entries */}
-                            {vendorPayments.length > 0 ? (
-                              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                                {vendorPayments.map((payment, paymentIndex) => (
-                                  <div key={payment.id} style={{ 
-                                    padding: '0.75rem',
-                                    background: '#f1f5f9',
-                                    borderRadius: '6px',
-                                    border: '1px solid #cbd5e1'
-                                  }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '0.75fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'end' }}>
-                                      <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ fontSize: '0.75rem' }}>Amount (₹)</label>
-                                        <input
-                                          type="number"
-                                          value={payment.amount}
-                                          onChange={(e) => updateVendorPayment(index, paymentIndex, 'amount', parseFloat(e.target.value) || 0)}
-                                          min="0"
-                                          step="0.01"
-                                          style={{ fontSize: '0.875rem', padding: '0.375rem' }}
-                                        />
-                                      </div>
-
-                                      <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ fontSize: '0.75rem' }}>Date</label>
-                                        <input
-                                          type="date"
-                                          value={payment.date}
-                                          onChange={(e) => updateVendorPayment(index, paymentIndex, 'date', e.target.value)}
-                                          style={{ fontSize: '0.875rem', padding: '0.375rem' }}
-                                        />
-                                      </div>
-
-                                      <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ fontSize: '0.75rem' }}>Mode</label>
-                                        <select
-                                          value={payment.payment_mode}
-                                          onChange={(e) => updateVendorPayment(index, paymentIndex, 'payment_mode', e.target.value)}
-                                          style={{ fontSize: '0.875rem', padding: '0.375rem' }}
-                                        >
-                                          <option value="Cash">Cash</option>
-                                          <option value="Bank Transfer">Bank Transfer</option>
-                                          <option value="UPI">UPI</option>
-                                          <option value="Cheque">Cheque</option>
-                                        </select>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => removeVendorPayment(index, paymentIndex)}
-                                        style={{ 
-                                          border: 'none',
-                                          background: '#ef4444',
-                                          color: 'white',
-                                          padding: '0.375rem',
-                                          borderRadius: '4px',
-                                          cursor: 'pointer'
-                                        }}
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div style={{ 
-                                textAlign: 'center',
-                                padding: '1rem',
-                                color: '#94a3b8',
-                                fontSize: '0.875rem',
-                                background: '#f9fafb',
-                                borderRadius: '6px',
-                                border: '1px dashed #e5e7eb'
-                              }}>
-                                No payments recorded yet. Click "+ Add Payment" to track vendor payments.
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
                   </div>
                 ))}
-              </div>
-            ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '2rem', 
-                background: '#f9fafb', 
-                borderRadius: '8px',
-                border: '2px dashed #e5e7eb'
-              }}>
-                <p style={{ color: '#64748b', margin: 0 }}>No vendor costs added yet</p>
-              </div>
+              </>
             )}
           </div>
 
-          {/* Additional Notes */}
-          <div className="form-group" style={{ marginBottom: '2rem' }}>
-            <label>Additional Notes</label>
-            <textarea 
-              name="notes" 
-              value={formData.notes} 
-              onChange={handleChange}
-              rows="3"
-              placeholder="Any additional information..."
-            />
+          {/* Summary */}
+          <div style={{ backgroundColor: '#f3f4f6', padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', textAlign: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Total Cost</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#dc2626' }}>₹{totalCost.toFixed(2)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Profit</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '600', color: profit >= 0 ? '#16a34a' : '#dc2626' }}>₹{profit.toFixed(2)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Margin</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#6366f1' }}>{profitMargin}%</div>
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '2px solid #e5e7eb' }}>
-            <button 
-              type="button" 
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
               onClick={onClose}
-              className="btn btn-secondary"
+              style={{ padding: '0.75rem 1.5rem', backgroundColor: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: '500' }}
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
-              className="btn btn-primary"
-              disabled={!!validationError}
+              style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: '500' }}
             >
-              {revenue ? 'Update Revenue' : 'Create Revenue & Sync Ledgers'}
+              {revenue ? 'Update' : 'Save'} Revenue
             </button>
           </div>
         </form>
