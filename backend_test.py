@@ -23,7 +23,7 @@ BACKEND_URL = "https://budget-tracker-582.preview.emergentagent.com/api"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-class CRMBackendTester:
+class CRMFinanceIntegrationTester:
     def __init__(self):
         self.base_url = BACKEND_URL
         self.token = None
