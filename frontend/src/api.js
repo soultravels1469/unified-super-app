@@ -1,6 +1,6 @@
 // src/api.js
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000"; 
+const API_BASE_URL = process.env.REACT_APP_API_URL || "https://unified-super-app-5.onrender.com"; 
 
 // Example function to fetch clients
 export async function getClients() {
