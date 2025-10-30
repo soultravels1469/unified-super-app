@@ -1371,6 +1371,65 @@ async def rebuild_accounting_data():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/sync/crm-finance")
+async def sync_crm_finance():
+    """Sync CRM booked leads with Finance revenue entries"""
+    try:
+        # Find all booked leads
+        booked_leads = await db.leads.find({"status": {"$in": ["Booked", "Converted"]}}).to_list(None)
+        
+        synced_count = 0
+        skipped_count = 0
+        
+        for lead in booked_leads:
+            # Check if revenue already exists
+            existing_revenue = await db.revenues.find_one({"lead_id": lead.get("lead_id")})
+            
+            if not existing_revenue:
+                # Create revenue entry
+                revenue_data = {
+                    "id": str(uuid.uuid4()),
+                    "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    "client_name": lead["client_name"],
+                    "source": lead["lead_type"],
+                    "payment_mode": "Pending",
+                    "pending_amount": 0.0,
+                    "received_amount": 0.0,
+                    "status": "Pending",
+                    "supplier": "",
+                    "notes": f"Synced from CRM lead {lead['lead_id']}",
+                    "sale_price": 0.0,
+                    "cost_price_details": [],
+                    "total_cost_price": 0.0,
+                    "profit": 0.0,
+                    "profit_margin": 0.0,
+                    "partial_payments": [],
+                    "lead_id": lead["lead_id"],
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.revenues.insert_one(revenue_data)
+                
+                # Update lead with revenue_id
+                await db.leads.update_one(
+                    {"_id": lead["_id"]},
+                    {"$set": {"revenue_id": revenue_data["id"]}}
+                )
+                
+                synced_count += 1
+            else:
+                skipped_count += 1
+        
+        return {
+            "success": True,
+            "message": "CRM and Finance synced successfully",
+            "synced": synced_count,
+            "skipped": skipped_count,
+            "total_booked_leads": len(booked_leads)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
 # Setup CRM routes with DB dependency using app dependency override
 from crm.routes import get_crm_controller as crm_get_controller
 
