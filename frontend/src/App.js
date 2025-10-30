@@ -114,6 +114,7 @@ function App() {
                     <Route path="/admin/settings" element={<AdminSettings />} />
                     <Route path="/admin/users" element={<UserManagement />} />
                     <Route path="/admin/data" element={<DataManagement />} />
+                    <Route path="/admin/backup" element={<BackupManager />} />
                     <Route path="/admin/logs" element={<ActivityLogs />} />
                   </Routes>
                 </Layout>
