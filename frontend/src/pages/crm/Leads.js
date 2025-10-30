@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ListChecks, Plus, Search, Filter, Edit, Trash2, Eye, Phone, Mail } from 'lucide-react';
+import { ListChecks, Plus, Search, Filter, Edit, Trash2, Eye, Phone, Mail, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import LeadForm from '@/components/crm/LeadForm';
 
