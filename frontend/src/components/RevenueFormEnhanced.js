@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { X, Plus, Trash2, ChevronDown, ChevronUp, AlertCircle, DollarSign, Users, Calendar, CreditCard } from 'lucide-react';
 
 const PAYMENT_MODES = ["Cash", "Bank Transfer", "UPI", "Cheque", "Debit Card", "Credit Card", "Pending"];
+const VENDOR_TYPES = ["Hotel", "Land", "Visa", "Insurance", "Others"];
 
 function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
   const getTodayDate = () => new Date().toISOString().split('T')[0];
