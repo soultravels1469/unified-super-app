@@ -7,6 +7,7 @@ function Layout({ children, onLogout }) {
   const role = localStorage.getItem('role');
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   const [showServicesMenu, setShowServicesMenu] = useState(false);
+  const [showCRMMenu, setShowCRMMenu] = useState(false);
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
@@ -22,6 +23,14 @@ function Layout({ children, onLogout }) {
     { to: '/accounting/bank-accounts', icon: Building2, label: 'Bank Accounts', section: 'accounting' },
     { to: '/accounting/vendors', icon: UsersIcon, label: 'Vendors', section: 'accounting' },
     { to: '/accounting/vendor-report', icon: TrendingUp, label: 'Vendor Report', section: 'accounting' },
+  ];
+
+  const crmItems = [
+    { to: '/crm/dashboard', icon: BarChart3, label: 'CRM Dashboard' },
+    { to: '/crm/leads', icon: ListChecks, label: 'Leads' },
+    { to: '/crm/upcoming', icon: Calendar, label: 'Upcoming Travel' },
+    { to: '/crm/reminders', icon: Bell, label: 'Reminders' },
+    { to: '/crm/reports', icon: TrendingUp, label: 'Reports' },
   ];
 
   const servicesItems = [
