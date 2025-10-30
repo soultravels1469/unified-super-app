@@ -206,14 +206,18 @@ async def delete_document(
 
 @router.post("/reminders")
 async def create_reminder(
-    reminder: ReminderCreate,
-    controller: CRMController = Depends(get_crm_controller),
-    current_user: dict = None
+    reminder_data: dict = Body(...),
+    controller: CRMController = Depends(get_crm_controller)
 ):
     """Create a new reminder"""
-    user_id = current_user.get("username") if current_user else "admin"
-    created_reminder = await controller.create_reminder(reminder, user_id)
-    return {"success": True, "reminder": created_reminder}
+    try:
+        # Convert dict to ReminderCreate model
+        reminder = ReminderCreate(**reminder_data)
+        user_id = "admin"  # Hardcode for now
+        created_reminder = await controller.create_reminder(reminder, user_id)
+        return {"success": True, "reminder": created_reminder}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid reminder data: {str(e)}")
 
 
 @router.get("/reminders")
