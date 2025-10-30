@@ -19,7 +19,6 @@ import base64
 
 # Import CRM module
 from crm.controllers import CRMController
-from crm import routes as crm_routes
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
