@@ -10,6 +10,12 @@ from .utils import validate_file_type, save_upload_file, delete_file
 
 router = APIRouter(prefix="/crm", tags=["CRM"])
 
+# Test endpoint
+@router.post("/test")
+async def test_endpoint(data: dict):
+    """Test endpoint to check if POST works"""
+    return {"success": True, "received": data}
+
 # Dependency to get CRM controller
 def get_crm_controller(db=Depends(lambda: None)):
     # This will be replaced with actual DB dependency in server.py
