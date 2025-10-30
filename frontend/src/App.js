@@ -23,6 +23,7 @@ import BankAccounts from '@/pages/BankAccounts';
 import Vendors from '@/pages/Vendors';
 import ActivityLogs from '@/pages/ActivityLogs';
 import VendorReport from '@/pages/VendorReport';
+import VendorPayments from '@/pages/VendorPayments';
 import CRMDashboard from '@/pages/crm/CRMDashboard';
 import Leads from '@/pages/crm/Leads';
 import LeadDetail from '@/pages/crm/LeadDetail';
