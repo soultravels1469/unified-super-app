@@ -31,15 +31,15 @@ def get_crm_controller(db=Depends(lambda: None)):
 
 @router.post("/leads")
 async def create_lead(
-    lead_data: dict = Body(...),
+    request: dict = Body(...),
     controller: CRMController = Depends(get_crm_controller),
     current_user: dict = None  # Will be injected by auth middleware
 ):
     """Create a new lead"""
-    print(f"DEBUG: Received lead_data: {lead_data}")
+    print(f"DEBUG: Received request: {request}")
     try:
         # Convert dict to LeadCreate model
-        lead = LeadCreate(**lead_data)
+        lead = LeadCreate(**request)
         user_id = current_user.get("username") if current_user else "admin"
         created_lead = await controller.create_lead(lead, user_id)
         return {"success": True, "lead": created_lead}
