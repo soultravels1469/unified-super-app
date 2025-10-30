@@ -19,6 +19,7 @@ import InvoiceGenerator from '@/pages/InvoiceGenerator';
 import AdminSettings from '@/pages/AdminSettings';
 import UserManagement from '@/pages/UserManagement';
 import DataManagement from '@/pages/DataManagement';
+import BackupManager from '@/pages/BackupManager';
 import BankAccounts from '@/pages/BankAccounts';
 import Vendors from '@/pages/Vendors';
 import ActivityLogs from '@/pages/ActivityLogs';
