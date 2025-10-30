@@ -56,28 +56,7 @@ function Layout({ children, onLogout }) {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section">
-            <div className="nav-section-title">Main</div>
-            {navItems.filter(item => item.section === 'main').map((item) => {
-              // Hide admin-only items for viewer role
-              if (item.adminOnly === false && role === 'viewer') {
-                return null;
-              }
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                  data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
-                >
-                  <item.icon size={20} />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
-          </div>
-          
-          {/* CRM Section - Grouped */}
+          {/* CRM Section - Grouped (TOP PRIORITY) */}
           <div className="nav-section">
             <div 
               className="nav-section-title" 
@@ -99,6 +78,27 @@ function Layout({ children, onLogout }) {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+          </div>
+          
+          <div className="nav-section">
+            <div className="nav-section-title">Main</div>
+            {navItems.filter(item => item.section === 'main').map((item) => {
+              // Hide admin-only items for viewer role
+              if (item.adminOnly === false && role === 'viewer') {
+                return null;
+              }
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
+                >
+                  <item.icon size={20} />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </div>
           
           {/* Services Section - Grouped */}
