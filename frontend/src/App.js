@@ -109,6 +109,7 @@ function App() {
                     <Route path="/accounting/bank-accounts" element={<BankAccounts />} />
                     <Route path="/accounting/vendors" element={<Vendors />} />
                     <Route path="/accounting/vendor-report" element={<VendorReport />} />
+                    <Route path="/vendor-payments" element={<VendorPayments />} />
                     <Route path="/admin/settings" element={<AdminSettings />} />
                     <Route path="/admin/users" element={<UserManagement />} />
                     <Route path="/admin/data" element={<DataManagement />} />
