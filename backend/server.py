@@ -1556,6 +1556,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_db_client():
+    """Run on startup"""
+    print("Starting up...")
+    # Start daily backup task
+    asyncio.create_task(backup_service.schedule_daily_backup())
+    print("Daily backup scheduler started")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
