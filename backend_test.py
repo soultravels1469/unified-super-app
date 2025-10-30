@@ -613,31 +613,50 @@ class CRMFinanceIntegrationTester:
             self.log_result("Reminders Filter", False, f"Error: {str(e)}")
             return False
     
-    def update_admin_settings(self, settings):
-        """Update admin settings"""
-        try:
-            response = requests.post(f"{self.base_url}/admin/settings", json=settings, headers=self.headers)
-            if response.status_code == 200:
-                return response.json()
-            else:
-                self.log_result("Update Admin Settings", False, f"Failed with status {response.status_code}", response.text)
-                return None
-        except Exception as e:
-            self.log_result("Update Admin Settings", False, f"Error: {str(e)}")
-            return None
+    # ===== MAIN TEST RUNNER =====
     
-    def delete_revenue(self, revenue_id):
-        """Delete revenue"""
-        try:
-            response = requests.delete(f"{self.base_url}/revenue/{revenue_id}", headers=self.headers)
-            if response.status_code == 200:
-                return True
-            else:
-                self.log_result("Delete Revenue", False, f"Failed with status {response.status_code}", response.text)
-                return False
-        except Exception as e:
-            self.log_result("Delete Revenue", False, f"Error: {str(e)}")
+    def run_primary_tests(self):
+        """Run all 4 primary tests from review request"""
+        print("=" * 80)
+        print("🚀 STARTING CRM-FINANCE INTEGRATION TESTS")
+        print("=" * 80)
+        
+        if not self.login():
+            print("❌ Login failed - cannot proceed with tests")
             return False
+        
+        test_results = {}
+        
+        # Run all 4 primary tests
+        test_results['auto_revenue'] = self.test_auto_revenue_creation()
+        test_results['sync_endpoint'] = self.test_sync_crm_finance()
+        test_results['upcoming_travels'] = self.test_upcoming_travels_dashboard()
+        test_results['reminders_filter'] = self.test_reminders_filter()
+        
+        # Summary
+        print("\n" + "=" * 80)
+        print("📊 TEST RESULTS SUMMARY")
+        print("=" * 80)
+        
+        passed_tests = []
+        failed_tests = []
+        
+        for test_name, result in test_results.items():
+            if result:
+                passed_tests.append(test_name)
+                print(f"✅ {test_name.replace('_', ' ').title()}: PASSED")
+            else:
+                failed_tests.append(test_name)
+                print(f"❌ {test_name.replace('_', ' ').title()}: FAILED")
+        
+        print(f"\n📈 OVERALL RESULTS: {len(passed_tests)}/{len(test_results)} tests passed")
+        
+        if failed_tests:
+            print(f"❌ Failed tests: {', '.join(failed_tests)}")
+            return False
+        else:
+            print("🎉 ALL PRIMARY TESTS PASSED!")
+            return True
     
     # ===== CRM LEAD CRUD TESTS =====
     
