@@ -244,14 +244,19 @@ async def get_reminders(
 @router.put("/reminders/{reminder_id}")
 async def update_reminder(
     reminder_id: str,
-    reminder_update: ReminderUpdate,
+    reminder_update: dict = Body(...),
     controller: CRMController = Depends(get_crm_controller)
 ):
     """Update a reminder"""
-    updated_reminder = await controller.update_reminder(reminder_id, reminder_update)
-    if not updated_reminder:
-        raise HTTPException(status_code=404, detail="Reminder not found")
-    return {"success": True, "reminder": updated_reminder}
+    try:
+        # Convert dict to ReminderUpdate model
+        update_model = ReminderUpdate(**reminder_update)
+        updated_reminder = await controller.update_reminder(reminder_id, update_model)
+        if not updated_reminder:
+            raise HTTPException(status_code=404, detail="Reminder not found")
+        return {"success": True, "reminder": updated_reminder}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid update data: {str(e)}")
 
 
 @router.delete("/reminders/{reminder_id}")
