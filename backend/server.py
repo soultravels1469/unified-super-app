@@ -36,7 +36,7 @@ user = os.getenv("MONGO_USER")
 password = os.getenv("MONGO_PASS")
 db_name = os.getenv("MONGO_DB")
 
-mongo_uri = f"mongodb+srv://(user):{password}@souldashboard.keakxoe.mongodb.net/?appName=souldashboard"
+mongo_uri = f"mongodb+srv://{user}:{password}@souldashboard.keakxoe.mongodb.net/?appName=souldashboard"
 client = MongoClient(mongo_uri)
 db = client[db_name]
 
