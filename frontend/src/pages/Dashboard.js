@@ -1,328 +1,304 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API } from '@/App';
+import { useNavigate } from 'react-router-dom';
+import { DollarSign, TrendingUp, TrendingDown, Users, Calendar, Bell, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
-import { TrendingUp, TrendingDown, DollarSign, CreditCard, Clock, PieChart as PieChartIcon } from 'lucide-react';
 
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+const API = process.env.REACT_APP_BACKEND_URL || '';
 
 function Dashboard() {
+  const navigate = useNavigate();
+  const role = localStorage.getItem('role');
   const [summary, setSummary] = useState(null);
   const [monthlyData, setMonthlyData] = useState([]);
-  const [expenseByCategory, setExpenseByCategory] = useState([]);
-  const [revenueBySource, setRevenueBySource] = useState([]);
-  const [cashFlow, setCashFlow] = useState([]);
+  const [expenseBreakdown, setExpenseBreakdown] = useState([]);
+  const [profitTrend, setProfitTrend] = useState([]);
+  const [upcomingTravels, setUpcomingTravels] = useState([]);
+  const [reminders, setReminders] = useState([]);
+  const [crmSummary, setCrmSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('yearly');
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchDashboardData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const [summaryRes, monthlyRes, expensesRes, revenuesRes] = await Promise.all([
-        axios.get(`${API}/dashboard/summary`),
-        axios.get(`${API}/dashboard/monthly`),
-        axios.get(`${API}/expenses`),
-        axios.get(`${API}/revenue`)
+      setLoading(true);
+      const year = new Date().getFullYear();
+      const [summaryRes, monthlyRes, expenseRes, profitRes, crmRes, travelRes, reminderRes] = await Promise.all([
+        axios.get(`${API}/api/dashboard/summary`),
+        axios.get(`${API}/api/dashboard/monthly?year=${year}`),
+        axios.get(`${API}/api/reports?type=expense-breakdown`),
+        axios.get(`${API}/api/reports?type=profit-loss-trend&year=${year}`),
+        axios.get(`${API}/api/crm/dashboard-summary`),
+        axios.get(`${API}/api/crm/upcoming-travels-dashboard`),
+        axios.get(`${API}/api/crm/reminders?status=Pending`)
       ]);
 
       setSummary(summaryRes.data);
       setMonthlyData(monthlyRes.data);
-      
-      // Process expense by category
-      const expenseCategories = {};
-      expensesRes.data.forEach(exp => {
-        const cat = exp.category || 'Other';
-        expenseCategories[cat] = (expenseCategories[cat] || 0) + exp.amount;
-      });
-      const expensePieData = Object.entries(expenseCategories).map(([name, value]) => ({ name, value }));
-      setExpenseByCategory(expensePieData);
-
-      // Process revenue by source
-      const revenueSources = {};
-      revenuesRes.data.forEach(rev => {
-        if (rev.status === 'Received') {
-          const source = rev.source || 'Other';
-          revenueSources[source] = (revenueSources[source] || 0) + rev.received_amount;
-        }
-      });
-      const revenuePieData = Object.entries(revenueSources).map(([name, value]) => ({ name, value }));
-      setRevenueBySource(revenuePieData);
-
-      // Calculate cash flow (monthly net profit)
-      const cashFlowData = monthlyRes.data.map(m => ({
-        month: m.month,
-        profit: m.revenue - m.expenses
-      }));
-      setCashFlow(cashFlowData);
-
+      setExpenseBreakdown(expenseRes.data.breakdown || []);
+      setProfitTrend(profitRes.data.trend || []);
+      setCrmSummary(crmRes.data);
+      setUpcomingTravels(travelRes.data || []);
+      setReminders(reminderRes.data.slice(0, 5) || []);
     } catch (error) {
+      console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchFilteredData = async () => {
-    setLoading(true);
+  const handleSync = async () => {
     try {
-      let params = {};
-      
-      if (viewMode === 'monthly' && selectedMonth) {
-        const [year, month] = selectedMonth.split('-');
-        params = { period: 'month', year: parseInt(year), month: parseInt(month) };
-      } else if (viewMode === 'yearly') {
-        params = { period: 'year', year: selectedYear };
-      }
-
-      const response = await axios.get(`${API}/reports`, { params });
-      
-      setSummary({
-        total_revenue: response.data.total_revenue,
-        total_expenses: response.data.total_expenses,
-        pending_payments: 0,
-        net_profit: response.data.net_profit
-      });
+      setSyncing(true);
+      const response = await axios.get(`${API}/api/sync/crm-finance`);
+      toast.success(`Synced: ${response.data.synced} new entries, ${response.data.skipped} already synced`);
+      fetchDashboardData();
     } catch (error) {
-      toast.error('Failed to load filtered data');
+      console.error('Sync error:', error);
+      toast.error('Failed to sync CRM & Finance');
     } finally {
-      setLoading(false);
+      setSyncing(false);
     }
   };
 
-  useEffect(() => {
-    if (viewMode === 'monthly' && selectedMonth) {
-      fetchFilteredData();
-    } else if (viewMode === 'yearly') {
-      fetchFilteredData();
+  const cards = [
+    {
+      title: 'Total Revenue',
+      value: `₹${summary?.total_revenue?.toLocaleString() || 0}`,
+      icon: DollarSign,
+      color: '#10b981',
+      bgColor: '#d1fae5',
+      onClick: () => navigate('/revenue')
+    },
+    {
+      title: 'Total Expenses',
+      value: `₹${summary?.total_expenses?.toLocaleString() || 0}`,
+      icon: TrendingDown,
+      color: '#ef4444',
+      bgColor: '#fee2e2',
+      onClick: () => navigate('/expenses')
+    },
+    {
+      title: 'Net Profit',
+      value: `₹${summary?.net_profit?.toLocaleString() || 0}`,
+      icon: TrendingUp,
+      color: '#6366f1',
+      bgColor: '#eef2ff',
+      onClick: () => navigate('/reports')
+    },
+    {
+      title: 'Pending Payments',
+      value: `₹${summary?.pending_amount?.toLocaleString() || 0}`,
+      icon: Clock,
+      color: '#f59e0b',
+      bgColor: '#fef3c7',
+      onClick: () => navigate('/pending')
     }
-  }, [viewMode, selectedMonth, selectedYear]);
+  ];
 
-  const getCurrentMonthDefault = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  };
-
-  useEffect(() => {
-    if (viewMode === 'monthly' && !selectedMonth) {
-      setSelectedMonth(getCurrentMonthDefault());
+  const crmCards = [
+    {
+      title: 'Active Leads',
+      value: crmSummary?.active_leads || 0,
+      icon: Users,
+      color: '#8b5cf6',
+      bgColor: '#f3e8ff',
+      onClick: () => navigate('/crm/leads', { state: { status: 'New,In Process' } })
+    },
+    {
+      title: 'Booked Leads',
+      value: crmSummary?.booked_leads || 0,
+      icon: Calendar,
+      color: '#10b981',
+      bgColor: '#d1fae5',
+      onClick: () => navigate('/crm/leads', { state: { status: 'Booked,Converted' } })
     }
-  }, [viewMode]);
+  ];
 
-  const profitMargin = summary ? ((summary.net_profit / summary.total_revenue) * 100).toFixed(1) : 0;
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
   if (loading) {
-    return <div className="page-container">Loading...</div>;
+    return (
+      <div className="page-container">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="page-container" data-testid="dashboard-page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 className="page-title" style={{ margin: 0 }} data-testid="dashboard-title">Business Dashboard</h1>
-        
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <select
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-            style={{
-              padding: '0.625rem 1rem',
-              borderRadius: '12px',
-              border: '2px solid #e2e8f0',
-              fontSize: '0.9375rem',
-              fontWeight: 500
-            }}
-            data-testid="view-mode-select"
+    <div className="page-container">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="page-title">Business Dashboard</h1>
+        {role === 'admin' && (
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="btn btn-primary flex items-center gap-2"
           >
-            <option value="yearly">Yearly View</option>
-            <option value="monthly">Monthly View</option>
-          </select>
-
-          {viewMode === 'monthly' && (
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              style={{
-                padding: '0.625rem 1rem',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0',
-                fontSize: '0.9375rem'
-              }}
-              data-testid="month-picker"
-            />
-          )}
-
-          {viewMode === 'yearly' && (
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              style={{
-                padding: '0.625rem 1rem',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0',
-                fontSize: '0.9375rem'
-              }}
-              data-testid="year-select"
-            >
-              {Array.from({ length: 5 }, (_, i) => {
-                const y = new Date().getFullYear() - i;
-                return <option key={y} value={y}>{y}</option>;
-              })}
-            </select>
-          )}
-        </div>
+            <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Syncing...' : 'Sync CRM & Finance'}
+          </button>
+        )}
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card revenue" data-testid="stat-revenue">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-label">Total Revenue</div>
-              <div className="stat-value" data-testid="stat-revenue-value">₹{summary?.total_revenue?.toLocaleString() || 0}</div>
-            </div>
-            <DollarSign size={40} style={{ color: '#10b981', opacity: 0.3 }} />
-          </div>
-        </div>
-
-        <div className="stat-card expense" data-testid="stat-expenses">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-label">Total Expenses</div>
-              <div className="stat-value" data-testid="stat-expenses-value">₹{summary?.total_expenses?.toLocaleString() || 0}</div>
-            </div>
-            <CreditCard size={40} style={{ color: '#ef4444', opacity: 0.3 }} />
-          </div>
-        </div>
-
-        <div className="stat-card pending" data-testid="stat-pending">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-label">Pending Payments</div>
-              <div className="stat-value" data-testid="stat-pending-value">₹{summary?.pending_payments?.toLocaleString() || 0}</div>
-            </div>
-            <Clock size={40} style={{ color: '#f59e0b', opacity: 0.3 }} />
-          </div>
-        </div>
-
-        <div className="stat-card profit" data-testid="stat-profit">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-label">Net Profit</div>
-              <div className="stat-value" data-testid="stat-profit-value">₹{summary?.net_profit?.toLocaleString() || 0}</div>
-              <div style={{ fontSize: '0.875rem', color: summary?.net_profit >= 0 ? '#10b981' : '#ef4444', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                {summary?.net_profit >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                {profitMargin}% Margin
+      {/* Finance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {cards.map((card, index) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={index}
+              onClick={card.onClick}
+              className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow"
+              style={{ borderLeft: `4px solid ${card.color}` }}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">{card.title}</p>
+                  <p className="text-2xl font-bold mt-2" style={{ color: card.color }}>
+                    {card.value}
+                  </p>
+                </div>
+                <div style={{ backgroundColor: card.bgColor, color: card.color }} className="p-3 rounded-full">
+                  <Icon size={24} />
+                </div>
               </div>
             </div>
-          </div>
+          );
+        })}
+      </div>
+
+      {/* CRM Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {crmCards.map((card, index) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={index}
+              onClick={card.onClick}
+              className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow"
+              style={{ borderLeft: `4px solid ${card.color}` }}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">{card.title}</p>
+                  <p className="text-3xl font-bold mt-2" style={{ color: card.color }}>
+                    {card.value}
+                  </p>
+                </div>
+                <div style={{ backgroundColor: card.bgColor, color: card.color }} className="p-3 rounded-full">
+                  <Icon size={24} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Revenue vs Expenses</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
+              <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Expense Breakdown</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={expenseBreakdown} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={100} label>
+                {expenseBreakdown.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-        {viewMode === 'yearly' && monthlyData.length > 0 && (
-          <div className="chart-container" data-testid="revenue-expense-chart">
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Revenue vs Expenses Trend</h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" stroke="#64748b" />
-                <YAxis stroke="#64748b" />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="revenue" fill="#10b981" radius={[8, 8, 0, 0]} name="Revenue" />
-                <Bar dataKey="expenses" fill="#ef4444" radius={[8, 8, 0, 0]} name="Expenses" />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* Upcoming Travel & Reminders */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Calendar size={20} />
+              Upcoming Travel (Next 30 Days)
+            </h3>
+            <button onClick={() => navigate('/crm/upcoming')} className="text-sm text-indigo-600 hover:text-indigo-800">
+              View All
+            </button>
           </div>
-        )}
+          {upcomingTravels.length > 0 ? (
+            <div className="space-y-2">
+              {upcomingTravels.slice(0, 5).map((travel) => (
+                <div key={travel._id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <div>
+                    <p className="font-medium text-sm">{travel.client_name}</p>
+                    <p className="text-xs text-gray-500">{travel.lead_type}</p>
+                  </div>
+                  <p className="text-sm font-medium text-indigo-600">
+                    {new Date(travel.travel_date).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No upcoming travel</p>
+          )}
+        </div>
 
-        {cashFlow.length > 0 && (
-          <div className="chart-container" data-testid="profit-loss-chart">
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Profit/Loss Trend</h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={cashFlow}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" stroke="#64748b" />
-                <YAxis stroke="#64748b" />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-                <Legend />
-                <Line type="monotone" dataKey="profit" stroke="#6366f1" strokeWidth={3} name="Net Profit" />
-              </LineChart>
-            </ResponsiveContainer>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Bell size={20} />
+              Recent Reminders
+            </h3>
+            <button onClick={() => navigate('/crm/reminders')} className="text-sm text-indigo-600 hover:text-indigo-800">
+              View All
+            </button>
           </div>
-        )}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-        {expenseByCategory.length > 0 && (
-          <div className="chart-container" data-testid="expense-breakdown-chart">
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Expense Breakdown by Category</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={expenseByCategory}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {expenseByCategory.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {revenueBySource.length > 0 && (
-          <div className="chart-container" data-testid="revenue-source-chart">
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Revenue by Source</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={revenueBySource}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {revenueBySource.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+          {reminders.length > 0 ? (
+            <div className="space-y-2">
+              {reminders.map((reminder) => (
+                <div key={reminder._id} className="flex justify-between items-start p-2 bg-gray-50 rounded">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{reminder.title}</p>
+                    <p className="text-xs text-gray-500">{new Date(reminder.date).toLocaleString()}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded ${
+                    reminder.priority === 'High' ? 'bg-red-100 text-red-800' :
+                    reminder.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {reminder.priority}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No pending reminders</p>
+          )}
+        </div>
       </div>
     </div>
   );
