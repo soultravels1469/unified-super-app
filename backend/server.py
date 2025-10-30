@@ -1430,6 +1430,28 @@ async def sync_crm_finance():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
+@api_router.get("/crm/upcoming-travels-dashboard")
+async def get_upcoming_travels_dashboard():
+    """Get upcoming travels for next 30 days (for dashboard)"""
+    try:
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        next_30_days = today + timedelta(days=30)
+        
+        leads = await db.leads.find({
+            "status": {"$in": ["Booked", "Converted"]},
+            "travel_date": {
+                "$gte": today.isoformat(),
+                "$lte": next_30_days.isoformat()
+            }
+        }).sort("travel_date", 1).to_list(None)
+        
+        for lead in leads:
+            lead["_id"] = str(lead["_id"])
+        
+        return leads
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Setup CRM routes with DB dependency using app dependency override
 from crm.routes import get_crm_controller as crm_get_controller
 
