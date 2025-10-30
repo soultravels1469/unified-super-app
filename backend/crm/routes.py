@@ -185,14 +185,14 @@ async def delete_document(
 
 @router.post("/reminders")
 async def create_reminder(
-    reminder_data: ReminderCreate,
+    reminder: ReminderCreate,
     controller: CRMController = Depends(get_crm_controller),
     current_user: dict = None
 ):
     """Create a new reminder"""
     user_id = current_user.get("username") if current_user else "admin"
-    reminder = await controller.create_reminder(reminder_data, user_id)
-    return {"success": True, "reminder": reminder}
+    created_reminder = await controller.create_reminder(reminder, user_id)
+    return {"success": True, "reminder": created_reminder}
 
 
 @router.get("/reminders")
