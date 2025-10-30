@@ -22,6 +22,7 @@ import base64
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+from urllib.parse import quote_plus
 
 # Import CRM module
 from crm.controllers import CRMController
@@ -32,9 +33,10 @@ load_dotenv(ROOT_DIR / '.env')
 # MongoDB connection
 load_dotenv()
 
-user = os.getenv("MONGO_USER")
-password = os.getenv("MONGO_PASS")
+user = quote_plus(os.getenv("MONGO_USER"))
+password = quote_plus(os.getenv("MONGO_PASS"))
 db_name = os.getenv("MONGO_DB")
+
 
 mongo_uri = f"mongodb+srv://{user}:{password}@souldashboard.keakxoe.mongodb.net/?appName=souldashboard"
 client = MongoClient(mongo_uri)
