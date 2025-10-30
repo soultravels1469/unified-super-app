@@ -2,7 +2,6 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
-import httpx
 
 from .models import Lead, LeadCreate, LeadUpdate, Reminder, ReminderCreate, ReminderUpdate
 from .utils import generate_lead_id, generate_referral_code
