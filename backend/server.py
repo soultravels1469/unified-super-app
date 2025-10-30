@@ -1440,8 +1440,10 @@ async def get_upcoming_travels_dashboard():
         leads = await db.leads.find({
             "status": {"$in": ["Booked", "Converted"]},
             "travel_date": {
-                "$gte": today.isoformat(),
-                "$lte": next_30_days.isoformat()
+                "$exists": True,
+                "$ne": None,
+                "$gte": today,
+                "$lte": next_30_days
             }
         }).sort("travel_date", 1).to_list(None)
         
