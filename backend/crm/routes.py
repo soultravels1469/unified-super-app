@@ -8,7 +8,7 @@ from .models import LeadCreate, LeadUpdate, ReminderCreate, ReminderUpdate
 from .controllers import CRMController
 from .utils import validate_file_type, save_upload_file, delete_file
 
-router = APIRouter(prefix="/api/crm", tags=["CRM"])
+router = APIRouter(prefix="/crm", tags=["CRM"])
 
 # Dependency to get CRM controller
 def get_crm_controller(db=Depends(lambda: None)):
