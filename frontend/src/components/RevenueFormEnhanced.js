@@ -140,7 +140,8 @@ function RevenueFormEnhanced({ revenue, onClose, defaultSource = '' }) {
     setCostRows([...costRows, {
       id: `cost_${Date.now()}`,
       vendor_name: vendors[0]?.vendor_name || '',
-      vendor_phone: vendors[0]?.phone || '',
+      vendor_type: 'Hotel',
+      vendor_note: '',
       amount: 0,
       payment_status: 'Pending',
       vendor_payments: []
