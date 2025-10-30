@@ -103,7 +103,7 @@
 #====================================================================================================
 
 user_problem_statement: |
-  Build a professional, centralized Admin Settings panel with:
+  PREVIOUS: Build a professional, centralized Admin Settings panel with:
   1. Admin Settings UI with 4 tabs: Branding, Bank Details, Invoice Customization, Data Control
   2. Branding: Logo upload, company details (name, address, contact, tagline, GSTIN)
   3. Bank Details: Multiple bank accounts with CRUD operations, mark default
@@ -111,6 +111,17 @@ user_problem_statement: |
   5. Data Control: Export/Import functionality, clear test data
   6. Full integration with Invoice Generator and Dashboard
   7. Real-time sync between Revenue/Expense and Accounts sections
+
+  CURRENT: Integrate CRM Module into Finance App:
+  1. CRM Dashboard with interactive cards and charts
+  2. Lead Management (CRUD) with referral system and loyalty points
+  3. Document upload (3MB limit, PDF/JPG/PNG/DOCX)
+  4. Auto-create Revenue entry when lead status = Booked/Converted
+  5. Reminders linked to leads
+  6. Upcoming Travel (next 10 days)
+  7. CRM Reports and Analytics
+  8. Role-based access (Admin full CRUD, Viewer read-only)
+  9. Full integration: Lead → Revenue → Ledger flow
 
 backend:
   - task: "Admin settings GET endpoint"
