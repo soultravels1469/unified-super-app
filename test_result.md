@@ -384,15 +384,18 @@ backend:
 
   - task: "CRM Dashboard Analytics endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/crm/routes.py, /app/backend/crm/controllers.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented analytics endpoints: GET /api/crm/dashboard-summary (counts: total_leads, active_leads, booked_leads, upcoming_travels, today_reminders, total_referrals), GET /api/crm/reports/monthly (monthly lead counts), GET /api/crm/reports/lead-type-breakdown (Visa/Ticket/Package distribution), GET /api/crm/reports/lead-source-breakdown (source distribution), GET /api/crm/reports/referral-leaderboard (top 10 referrers), GET /api/crm/upcoming-travels (leads with travel_date in next 10 days). All use MongoDB aggregation pipelines for performance."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All analytics endpoints working correctly with proper data aggregation. Verified: (1) DASHBOARD SUMMARY - returns correct counts (total_leads: 41, active_leads: 34, booked_leads: 7, upcoming_travels: 2, today_reminders: 0, total_referrals: 15), (2) MONTHLY REPORT - 12 months data with proper structure, (3) LEAD TYPE BREAKDOWN - 3 types (Visa/Ticket/Package) distribution, (4) LEAD SOURCE BREAKDOWN - 4 sources distribution, (5) UPCOMING TRAVELS - correctly detects leads with travel_date in next 10 days. All MongoDB aggregation pipelines functioning efficiently."
 
 frontend:
   - task: "Vendor Partial Payment UI in Revenue Form"
