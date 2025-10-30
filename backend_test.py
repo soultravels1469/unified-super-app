@@ -752,6 +752,293 @@ class CRMBackendTester:
             self.log_result("Reminders CRUD", False, f"Error: {str(e)}")
             return False
     
+    def test_analytics_endpoints(self):
+        """Test Scenario 6: Analytics and Dashboard Endpoints"""
+        try:
+            print("\n🔍 SCENARIO 6: Analytics and Dashboard Endpoints")
+            
+            # Test dashboard summary
+            response = requests.get(f"{self.base_url}/crm/dashboard-summary", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Dashboard Summary", False, f"Failed with status {response.status_code}")
+                return False
+            
+            summary = response.json()
+            required_fields = ['total_leads', 'active_leads', 'booked_leads', 'upcoming_travels', 'today_reminders', 'total_referrals']
+            
+            for field in required_fields:
+                if field not in summary:
+                    self.log_result("Dashboard Summary Fields", False, f"Missing field: {field}")
+                    return False
+                if not isinstance(summary[field], int):
+                    self.log_result("Dashboard Summary Types", False, f"Field {field} is not integer: {type(summary[field])}")
+                    return False
+            
+            self.log_result("Dashboard Summary", True, f"✅ Dashboard summary with counts: {summary}")
+            
+            # Test monthly leads report
+            current_year = datetime.now().year
+            response = requests.get(f"{self.base_url}/crm/reports/monthly?year={current_year}", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Monthly Leads Report", False, f"Failed with status {response.status_code}")
+                return False
+            
+            monthly_data = response.json()
+            if not isinstance(monthly_data, list) or len(monthly_data) != 12:
+                self.log_result("Monthly Leads Report", False, f"Expected 12 months, got {len(monthly_data) if isinstance(monthly_data, list) else type(monthly_data)}")
+                return False
+            
+            # Verify month structure
+            first_month = monthly_data[0]
+            if 'month' not in first_month or 'count' not in first_month:
+                self.log_result("Monthly Report Structure", False, f"Invalid month structure: {first_month}")
+                return False
+            
+            self.log_result("Monthly Leads Report", True, f"✅ Monthly report with 12 months")
+            
+            # Test lead type breakdown
+            response = requests.get(f"{self.base_url}/crm/reports/lead-type-breakdown", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Lead Type Breakdown", False, f"Failed with status {response.status_code}")
+                return False
+            
+            type_breakdown = response.json()
+            if not isinstance(type_breakdown, list):
+                self.log_result("Lead Type Breakdown", False, f"Expected list, got {type(type_breakdown)}")
+                return False
+            
+            self.log_result("Lead Type Breakdown", True, f"✅ Lead type breakdown with {len(type_breakdown)} types")
+            
+            # Test lead source breakdown
+            response = requests.get(f"{self.base_url}/crm/reports/lead-source-breakdown", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Lead Source Breakdown", False, f"Failed with status {response.status_code}")
+                return False
+            
+            source_breakdown = response.json()
+            if not isinstance(source_breakdown, list):
+                self.log_result("Lead Source Breakdown", False, f"Expected list, got {type(source_breakdown)}")
+                return False
+            
+            self.log_result("Lead Source Breakdown", True, f"✅ Lead source breakdown with {len(source_breakdown)} sources")
+            
+            # Test upcoming travels
+            response = requests.get(f"{self.base_url}/crm/upcoming-travels", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Upcoming Travels", False, f"Failed with status {response.status_code}")
+                return False
+            
+            upcoming_travels = response.json()
+            if not isinstance(upcoming_travels, list):
+                self.log_result("Upcoming Travels", False, f"Expected list, got {type(upcoming_travels)}")
+                return False
+            
+            self.log_result("Upcoming Travels", True, f"✅ Upcoming travels list with {len(upcoming_travels)} entries")
+            
+            # Create a lead with travel date in next 5 days to test upcoming travels
+            travel_date = datetime.now() + timedelta(days=3)
+            travel_lead_data = {
+                "client_name": "Travel Test Client",
+                "primary_phone": "+91-9876543260",
+                "email": "travel.test@example.com",
+                "lead_type": "Package",
+                "source": "Website",
+                "status": "Booked",
+                "travel_date": travel_date.isoformat()
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=travel_lead_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Travel Lead", False, f"Failed with status {response.status_code}")
+                return False
+            
+            # Verify it appears in upcoming travels
+            time.sleep(1)
+            response = requests.get(f"{self.base_url}/crm/upcoming-travels", headers=self.headers)
+            updated_travels = response.json()
+            
+            travel_found = any(lead.get('client_name') == 'Travel Test Client' for lead in updated_travels)
+            if not travel_found:
+                self.log_result("Upcoming Travel Detection", False, "Travel lead not found in upcoming travels")
+                return False
+            
+            self.log_result("Upcoming Travel Detection", True, "✅ Lead with upcoming travel date correctly detected")
+            
+            self.log_result("Analytics Endpoints", True, "✅ All analytics endpoints working correctly")
+            return True
+            
+        except Exception as e:
+            self.log_result("Analytics Endpoints", False, f"Error: {str(e)}")
+            return False
+    
+    def test_document_upload(self):
+        """Test Scenario 7: Document Upload, Download, Delete"""
+        try:
+            print("\n🔍 SCENARIO 7: Document Upload, Download, Delete")
+            
+            # First create a lead for document testing
+            lead_data = {
+                "client_name": "Document Test Client",
+                "primary_phone": "+91-9876543270",
+                "email": "document.test@example.com",
+                "lead_type": "Visa",
+                "source": "Walk-in",
+                "status": "In Process"
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Lead for Documents", False, f"Failed with status {response.status_code}")
+                return False
+            
+            lead = response.json().get('lead')
+            lead_id = lead.get('_id')
+            
+            # Create a small test file (PDF content)
+            test_file_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000074 00000 n \n0000000120 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n179\n%%EOF"
+            
+            # Test file upload
+            files = {
+                'file': ('test_document.pdf', io.BytesIO(test_file_content), 'application/pdf')
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/crm/leads/{lead_id}/upload",
+                files=files,
+                headers={'Authorization': self.headers['Authorization']}  # Remove Content-Type for multipart
+            )
+            
+            if response.status_code != 200:
+                self.log_result("Upload Document", False, f"Failed with status {response.status_code}: {response.text}")
+                return False
+            
+            upload_response = response.json()
+            if not upload_response.get('success'):
+                self.log_result("Upload Document", False, "Upload response success is False")
+                return False
+            
+            document = upload_response.get('document')
+            if not document:
+                self.log_result("Upload Document", False, "No document data in response")
+                return False
+            
+            file_path = document.get('file_path')
+            if not file_path:
+                self.log_result("Upload Document", False, "No file_path in document")
+                return False
+            
+            self.log_result("Upload Document", True, f"✅ Document uploaded: {file_path}")
+            
+            # Verify document is added to lead
+            response = requests.get(f"{self.base_url}/crm/leads/{lead_id}", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get Lead with Document", False, f"Failed with status {response.status_code}")
+                return False
+            
+            updated_lead = response.json()
+            documents = updated_lead.get('documents', [])
+            
+            if len(documents) == 0:
+                self.log_result("Document in Lead", False, "No documents found in lead")
+                return False
+            
+            uploaded_doc = documents[0]
+            if uploaded_doc.get('file_name') != 'test_document.pdf':
+                self.log_result("Document Metadata", False, f"Expected test_document.pdf, got {uploaded_doc.get('file_name')}")
+                return False
+            
+            self.log_result("Document in Lead", True, f"✅ Document metadata stored in lead")
+            
+            # Test file download
+            response = requests.get(
+                f"{self.base_url}/crm/leads/{lead_id}/docs/download?file_path={file_path}",
+                headers=self.headers
+            )
+            
+            if response.status_code != 200:
+                self.log_result("Download Document", False, f"Failed with status {response.status_code}")
+                return False
+            
+            # Verify content type and some content
+            if 'application' not in response.headers.get('content-type', ''):
+                self.log_result("Download Content Type", False, f"Unexpected content type: {response.headers.get('content-type')}")
+                return False
+            
+            if len(response.content) == 0:
+                self.log_result("Download Content", False, "Downloaded file is empty")
+                return False
+            
+            self.log_result("Download Document", True, f"✅ Document downloaded successfully")
+            
+            # Test file deletion
+            response = requests.delete(
+                f"{self.base_url}/crm/leads/{lead_id}/docs?file_path={file_path}",
+                headers=self.headers
+            )
+            
+            if response.status_code != 200:
+                self.log_result("Delete Document", False, f"Failed with status {response.status_code}")
+                return False
+            
+            delete_response = response.json()
+            if not delete_response.get('success'):
+                self.log_result("Delete Document", False, "Delete response success is False")
+                return False
+            
+            # Verify document removed from lead
+            response = requests.get(f"{self.base_url}/crm/leads/{lead_id}", headers=self.headers)
+            final_lead = response.json()
+            final_documents = final_lead.get('documents', [])
+            
+            doc_still_exists = any(doc.get('file_path') == file_path for doc in final_documents)
+            if doc_still_exists:
+                self.log_result("Document Removed from Lead", False, "Document still exists in lead after deletion")
+                return False
+            
+            self.log_result("Delete Document", True, f"✅ Document deleted successfully")
+            
+            # Test file size validation (create file > 3MB)
+            large_content = b"x" * (4 * 1024 * 1024)  # 4MB
+            large_files = {
+                'file': ('large_file.pdf', io.BytesIO(large_content), 'application/pdf')
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/crm/leads/{lead_id}/upload",
+                files=large_files,
+                headers={'Authorization': self.headers['Authorization']}
+            )
+            
+            if response.status_code == 400:
+                self.log_result("File Size Validation", True, "✅ Large file correctly rejected")
+            else:
+                self.log_result("File Size Validation", False, f"Expected 400, got {response.status_code}")
+                return False
+            
+            # Test invalid file type
+            invalid_files = {
+                'file': ('test.exe', io.BytesIO(b"invalid content"), 'application/octet-stream')
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/crm/leads/{lead_id}/upload",
+                files=invalid_files,
+                headers={'Authorization': self.headers['Authorization']}
+            )
+            
+            if response.status_code == 400:
+                self.log_result("File Type Validation", True, "✅ Invalid file type correctly rejected")
+            else:
+                self.log_result("File Type Validation", False, f"Expected 400, got {response.status_code}")
+                return False
+            
+            self.log_result("Document Upload", True, "✅ All document operations working correctly with proper validations")
+            return True
+            
+        except Exception as e:
+            self.log_result("Document Upload", False, f"Error: {str(e)}")
+            return False
+    
     def test_update_revenue_modify_vendor_payments(self, revenue_id):
         """Test Scenario 2: UPDATE Revenue - Modify Vendor Payments"""
         try:
