@@ -98,30 +98,120 @@ class CRMFinanceIntegrationTester:
             self.log_result("Get Leads", False, f"Error: {str(e)}")
             return []
     
-    def create_vendor(self, vendor_name, vendor_type="Hotel"):
-        """Create a vendor"""
+    # ===== PRIMARY TEST 1: AUTO-REVENUE CREATION =====
+    
+    def test_auto_revenue_creation(self):
+        """
+        PRIMARY TEST 1: Auto-Revenue Creation
+        Create lead with status='New', update to 'Booked', verify revenue auto-created
+        """
         try:
-            vendor_data = {
-                "vendor_name": vendor_name,
-                "contact": "9876543210",
-                "vendor_type": vendor_type,
-                "bank_name": "Test Bank",
-                "bank_account_number": "1234567890",
-                "bank_ifsc": "TEST0001234"
+            print("\n🔍 PRIMARY TEST 1: Auto-Revenue Creation")
+            
+            # Step 1: Create lead with status='New'
+            lead_data = {
+                "client_name": "Auto Revenue Test Client",
+                "primary_phone": "+91-9876543100",
+                "email": "autorevenue@example.com",
+                "lead_type": "Visa",
+                "source": "Walk-in",
+                "status": "New"
             }
             
-            response = requests.post(f"{self.base_url}/vendors", json=vendor_data, headers=self.headers)
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
             
-            if response.status_code == 200:
-                vendor = response.json()
-                self.log_result("Create Vendor", True, f"Created vendor: {vendor_name}")
-                return vendor.get('id')
-            else:
-                self.log_result("Create Vendor", False, f"Failed with status {response.status_code}", response.text)
-                return None
+            if response.status_code != 200:
+                self.log_result("Create Lead for Auto-Revenue", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            response_data = response.json()
+            if not response_data.get('success'):
+                self.log_result("Create Lead for Auto-Revenue", False, "Response success is False", response_data)
+                return False
+            
+            lead = response_data.get('lead')
+            lead_id = lead.get('_id')
+            lead_code = lead.get('lead_id')
+            
+            self.log_result("Create Lead for Auto-Revenue", True, f"✅ Lead created with ID: {lead_code}")
+            
+            # Step 2: Verify no revenue exists initially
+            revenues_before = self.get_revenues()
+            revenue_count_before = len([r for r in revenues_before if r.get('client_name') == lead_data['client_name']])
+            
+            if revenue_count_before > 0:
+                self.log_result("Initial Revenue Check", False, f"Revenue already exists for client: {revenue_count_before}")
+                return False
+            
+            self.log_result("Initial Revenue Check", True, "✅ No revenue exists initially")
+            
+            # Step 3: Update lead status to 'Booked'
+            update_data = {"status": "Booked"}
+            response = requests.put(f"{self.base_url}/crm/leads/{lead_id}", json=update_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Update Lead to Booked", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            updated_response = response.json()
+            if not updated_response.get('success'):
+                self.log_result("Update Lead to Booked", False, "Update response success is False", updated_response)
+                return False
+            
+            updated_lead = updated_response.get('lead')
+            if updated_lead.get('status') != 'Booked':
+                self.log_result("Lead Status Update", False, f"Expected Booked, got {updated_lead.get('status')}")
+                return False
+            
+            self.log_result("Update Lead to Booked", True, "✅ Lead status updated to Booked")
+            
+            # Step 4: Verify revenue auto-created
+            time.sleep(2)  # Allow for revenue creation
+            revenues_after = self.get_revenues()
+            
+            # Find revenue with matching client_name and lead_id
+            auto_revenue = None
+            for revenue in revenues_after:
+                if (revenue.get('client_name') == lead_data['client_name'] and 
+                    revenue.get('lead_id') == lead_code):
+                    auto_revenue = revenue
+                    break
+            
+            if not auto_revenue:
+                self.log_result("Auto-Revenue Creation", False, "Revenue entry not found after lead status update")
+                return False
+            
+            # Step 5: Validate revenue fields
+            validations = [
+                ("client_name", auto_revenue.get('client_name'), lead_data['client_name']),
+                ("source", auto_revenue.get('source'), lead_data['lead_type']),
+                ("status", auto_revenue.get('status'), "Pending"),
+                ("payment_mode", auto_revenue.get('payment_mode'), "Pending"),
+                ("lead_id", auto_revenue.get('lead_id'), lead_code)
+            ]
+            
+            for field, actual, expected in validations:
+                if actual != expected:
+                    self.log_result(f"Revenue {field} Validation", False, f"Expected {expected}, got {actual}")
+                    return False
+            
+            # Step 6: Verify bi-directional linkage
+            if not updated_lead.get('revenue_id'):
+                self.log_result("Revenue ID in Lead", False, "revenue_id not populated in lead")
+                return False
+            
+            if updated_lead.get('revenue_id') != auto_revenue.get('id'):
+                self.log_result("Revenue ID Match", False, f"Lead revenue_id {updated_lead.get('revenue_id')} != Revenue id {auto_revenue.get('id')}")
+                return False
+            
+            self.log_result("Auto-Revenue Creation", True, f"✅ Revenue auto-created with ID: {auto_revenue.get('id')}")
+            self.log_result("Bi-directional Linkage", True, "✅ Lead and Revenue properly linked")
+            
+            return {"lead": updated_lead, "revenue": auto_revenue}
+            
         except Exception as e:
-            self.log_result("Create Vendor", False, f"Error: {str(e)}")
-            return None
+            self.log_result("Auto-Revenue Creation", False, f"Error: {str(e)}")
+            return False
     
     def get_bank_accounts(self):
         """Get bank accounts list"""
