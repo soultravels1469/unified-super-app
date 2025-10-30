@@ -19,6 +19,9 @@ from activity_logger import ActivityLogger
 from backup_service import BackupService
 import shutil
 import base64
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
 # Import CRM module
 from crm.controllers import CRMController
@@ -27,9 +30,19 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+load_dotenv()
+
+user = os.getenv("MONGO_USER")
+password = os.getenv("MONGO_PASS")
+cluster = os.getenv("MONGO_CLUSTER")
+db_name = os.getenv("MONGO_DB")
+
+mongo_uri = f"mongodb+srv://{user}:{password}@{cluster}/{db_name}?retryWrites=true&w=majority"
+
+client = MongoClient(mongo_uri)
+db = client[db_name]
+
+print("✅ MongoDB Connected Successfully")
 
 # Initialize services
 accounting = AccountingService(db)
