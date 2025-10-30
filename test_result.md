@@ -339,15 +339,18 @@ backend:
 
   - task: "CRM Auto-Revenue Creation when Lead Booked"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/crm/controllers.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented _create_revenue_from_lead() method in CRMController. When lead status updated to 'Booked' or 'Converted', automatically creates revenue entry in revenues collection with: client_name (from lead), service_type (lead_type), amount=0 (editable later), booking_date (now), payment_mode='Pending', status='Pending', lead_id (linkage). Stores revenue_id in lead document for traceability. Includes idempotency check to prevent duplicate revenue creation."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: CRITICAL END-TO-END FLOW WORKING! Verified complete Lead → Revenue → Ledger integration: (1) Created lead with status='New', client_name='Test Client', lead_type='Visa', primary_phone='1234567890', (2) Updated lead status to 'Booked' - auto-triggered revenue creation, (3) Verified revenue entry exists with correct client_name='Test Client' and source='Visa', (4) Confirmed revenue has lead_id linkage (LD-20251030-1132), (5) Verified lead document stores revenue_id (59ae8ae9-a0d9-4287-9aff-7ff1f057988b), (6) Confirmed ledger entries check completed (no entries expected for amount=0, status=Pending). Auto-revenue creation functioning perfectly with proper bi-directional linkage."
 
   - task: "CRM Document Upload endpoints"
     implemented: true
