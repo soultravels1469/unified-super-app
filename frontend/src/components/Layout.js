@@ -45,6 +45,7 @@ function Layout({ children, onLogout }) {
     { to: '/admin/settings', icon: Settings, label: 'Settings' },
     { to: '/admin/users', icon: Users, label: 'User Management' },
     { to: '/admin/data', icon: Database, label: 'Data Management' },
+    { to: '/admin/backup', icon: Database, label: 'Backup & Recovery' },
     { to: '/admin/logs', icon: ScrollText, label: 'Activity Logs' },
   ];
 
