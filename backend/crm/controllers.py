@@ -404,16 +404,25 @@ class CRMController:
         if lead.get("revenue_id"):
             return lead["revenue_id"]
         
-        # Prepare revenue data
+        # Prepare revenue data matching Revenue model
         revenue_data = {
+            "id": str(uuid.uuid4()),
+            "date": datetime.utcnow().strftime("%Y-%m-%d"),
             "client_name": lead["client_name"],
-            "service_type": lead["lead_type"],  # Visa|Ticket|Package
-            "amount": 0,  # Default to 0, editable later
-            "booking_date": datetime.utcnow().isoformat(),
+            "source": lead["lead_type"],  # Visa|Ticket|Package
             "payment_mode": "Pending",
+            "pending_amount": 0.0,
+            "received_amount": 0.0,
             "status": "Pending",
-            "lead_id": lead["lead_id"],
-            "created_by": user_id,
+            "supplier": "",
+            "notes": f"Auto-created from CRM lead {lead['lead_id']}",
+            "sale_price": 0.0,
+            "cost_price_details": [],
+            "total_cost_price": 0.0,
+            "profit": 0.0,
+            "profit_margin": 0.0,
+            "partial_payments": [],
+            "lead_id": lead["lead_id"],  # Additional field for CRM linkage
             "created_at": datetime.utcnow().isoformat()
         }
         
