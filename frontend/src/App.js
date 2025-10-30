@@ -94,6 +94,12 @@ function App() {
                     <Route path="/expenses" element={<Expenses />} />
                     <Route path="/pending" element={<PendingPayments />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/crm/dashboard" element={<CRMDashboard />} />
+                    <Route path="/crm/leads" element={<Leads />} />
+                    <Route path="/crm/leads/:leadId" element={<LeadDetail />} />
+                    <Route path="/crm/upcoming" element={<UpcomingTravel />} />
+                    <Route path="/crm/reminders" element={<Reminders />} />
+                    <Route path="/crm/reports" element={<CRMReports />} />
                     <Route path="/accounting/chart-of-accounts" element={<ChartOfAccounts />} />
                     <Route path="/accounting/trial-balance" element={<TrialBalance />} />
                     <Route path="/accounting/cash-bank" element={<CashBankBook />} />
