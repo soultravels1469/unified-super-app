@@ -77,6 +77,30 @@ function Layout({ children, onLogout }) {
             })}
           </div>
           
+          {/* CRM Section - Grouped */}
+          <div className="nav-section">
+            <div 
+              className="nav-section-title" 
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => setShowCRMMenu(!showCRMMenu)}
+            >
+              <span>CRM</span>
+              <ChevronDown size={16} style={{ transform: showCRMMenu ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+            </div>
+            {showCRMMenu && crmItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                data-testid={`nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                style={{ paddingLeft: '2.5rem' }}
+              >
+                <item.icon size={18} />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+          
           {/* Services Section - Grouped */}
           <div className="nav-section">
             <div 
