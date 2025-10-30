@@ -322,6 +322,66 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Vendor Partial Payment Tracking feature working excellently! Comprehensive testing of 5 scenarios: (1) CREATE Revenue with Vendor Partial Payments - ✅ Correct ledger entries created with reference_type='vendor_payment', ✅ Debit 'Vendor - Hotel ABC' ₹15K, Credit Bank ₹10K + Cash ₹5K, ✅ Reference ID format correct, (2) UPDATE Revenue Modify Payments - ✅ Old ledgers deleted, new ones created, ✅ Updated amounts ₹23K total (₹15K + ₹8K), ✅ Cash entries removed correctly, (3) UPDATE Revenue Add New Vendor - ✅ Airlines XYZ ledgers created ₹50K, ✅ Multiple vendors handled properly, (4) DELETE Revenue - ✅ All vendor payment ledgers cleaned up, ✅ No orphaned entries, (5) Mixed Payment Status - ✅ Multiple cost details with different payment statuses handled correctly. FIXED CRITICAL BUG: Changed self.db.ledger to self.db.ledgers in accounting_service.py (3 locations). Success rate: 95.2% (20/21 tests passed). Minor: 1 trial balance issue due to test data accumulation. The vendor payment tracking system is production-ready and functioning perfectly."
 
+  - task: "CRM Lead CRUD endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/crm/routes.py, /app/backend/crm/controllers.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created CRM module with Lead model (client_name, phones, email, lead_type, source, reference_from, travel_date, status, labels, documents, loyalty_points, referral_code). Implemented full CRUD: GET /api/crm/leads (list with filters, pagination, search), POST /api/crm/leads (create), GET /api/crm/leads/:id (detail), PUT /api/crm/leads/:id (update), DELETE /api/crm/leads/:id (delete). Auto-generates lead_id (LD-YYYYMMDD-XXXX) and referral_code (6 chars). Referral system: auto-links referred clients, increments loyalty_points, adds 'Royal Client' label for 5+ referrals."
+
+  - task: "CRM Auto-Revenue Creation when Lead Booked"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/crm/controllers.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented _create_revenue_from_lead() method in CRMController. When lead status updated to 'Booked' or 'Converted', automatically creates revenue entry in revenues collection with: client_name (from lead), service_type (lead_type), amount=0 (editable later), booking_date (now), payment_mode='Pending', status='Pending', lead_id (linkage). Stores revenue_id in lead document for traceability. Includes idempotency check to prevent duplicate revenue creation."
+
+  - task: "CRM Document Upload endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/crm/routes.py, /app/backend/crm/utils.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented document management: POST /api/crm/leads/:id/upload (upload file), GET /api/crm/leads/:id/docs/download (download), DELETE /api/crm/leads/:id/docs (delete). Validation: file types (PDF, JPG, PNG, DOCX), size ≤ 3MB. Files saved to /uploads/crm/{lead_id}/ with timestamp prefix. Document metadata stored in lead.documents array (file_name, file_path, uploaded_at, size)."
+
+  - task: "CRM Reminders CRUD endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/crm/routes.py, /app/backend/crm/controllers.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created Reminder model (title, lead_id, description, date, priority, status). Implemented: POST /api/crm/reminders (create), GET /api/crm/reminders (list with filters), PUT /api/crm/reminders/:id (update/mark done), DELETE /api/crm/reminders/:id (delete). Reminders can be linked to leads or standalone."
+
+  - task: "CRM Dashboard Analytics endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/crm/routes.py, /app/backend/crm/controllers.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented analytics endpoints: GET /api/crm/dashboard-summary (counts: total_leads, active_leads, booked_leads, upcoming_travels, today_reminders, total_referrals), GET /api/crm/reports/monthly (monthly lead counts), GET /api/crm/reports/lead-type-breakdown (Visa/Ticket/Package distribution), GET /api/crm/reports/lead-source-breakdown (source distribution), GET /api/crm/reports/referral-leaderboard (top 10 referrers), GET /api/crm/upcoming-travels (leads with travel_date in next 10 days). All use MongoDB aggregation pipelines for performance."
+
 frontend:
   - task: "Vendor Partial Payment UI in Revenue Form"
     implemented: true
