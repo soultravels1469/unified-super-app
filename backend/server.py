@@ -1406,6 +1406,40 @@ async def get_activity_logs(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Backup endpoints
+@api_router.post("/backup/create")
+async def create_backup_manual():
+    """Manually trigger a backup"""
+    try:
+        result = await backup_service.create_backup(user="admin", backup_type="manual")
+        if result["success"]:
+            return result
+        else:
+            raise HTTPException(status_code=500, detail=result.get("error", "Backup failed"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/backup/list")
+async def list_backups():
+    """List all available backups"""
+    try:
+        backups = await backup_service.list_backups()
+        return backups
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/backup/restore/{filename}")
+async def restore_backup(filename: str):
+    """Restore from a backup file"""
+    try:
+        result = await backup_service.restore_backup(filename, user="admin")
+        if result["success"]:
+            return result
+        else:
+            raise HTTPException(status_code=500, detail=result.get("error", "Restore failed"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/sync/crm-finance")
 async def sync_crm_finance():
     """Sync CRM booked leads with Finance revenue entries"""
