@@ -484,6 +484,274 @@ class CRMBackendTester:
             self.log_result("Update Lead Status to Booked", False, f"Error: {str(e)}")
             return False
     
+    def test_referral_system(self):
+        """Test Scenario 4: Referral System and Loyalty Points"""
+        try:
+            print("\n🔍 SCENARIO 4: Referral System and Loyalty Points")
+            
+            # Create Lead A (referrer)
+            lead_a_data = {
+                "client_name": "Referrer Client A",
+                "primary_phone": "+91-9876543240",
+                "email": "referrer@example.com",
+                "lead_type": "Package",
+                "source": "Website",
+                "status": "New"
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_a_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Referrer Lead", False, f"Failed with status {response.status_code}")
+                return False
+            
+            lead_a = response.json().get('lead')
+            referral_code = lead_a.get('referral_code')
+            
+            self.log_result("Create Referrer Lead", True, f"Created referrer with code: {referral_code}")
+            
+            # Create Lead B with reference_from = Lead A's referral_code
+            lead_b_data = {
+                "client_name": "Referred Client B",
+                "primary_phone": "+91-9876543241",
+                "email": "referred@example.com",
+                "lead_type": "Visa",
+                "source": "Referral",
+                "status": "New",
+                "reference_from": referral_code
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_b_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Referred Lead", False, f"Failed with status {response.status_code}")
+                return False
+            
+            lead_b = response.json().get('lead')
+            lead_b_id = lead_b.get('lead_id')
+            
+            self.log_result("Create Referred Lead", True, f"Created referred lead: {lead_b_id}")
+            
+            # Verify Lead A's referred_clients array includes Lead B's lead_id
+            time.sleep(2)  # Allow for referral processing
+            response = requests.get(f"{self.base_url}/crm/leads/{lead_a.get('_id')}", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get Updated Referrer", False, f"Failed with status {response.status_code}")
+                return False
+            
+            updated_lead_a = response.json()
+            referred_clients = updated_lead_a.get('referred_clients', [])
+            
+            if lead_b_id not in referred_clients:
+                self.log_result("Referral Linkage", False, f"Lead B ID {lead_b_id} not in referrer's referred_clients: {referred_clients}")
+                return False
+            
+            self.log_result("Referral Linkage", True, f"Lead B correctly linked to referrer")
+            
+            # Verify Lead A's loyalty_points incremented by 10
+            loyalty_points = updated_lead_a.get('loyalty_points', 0)
+            if loyalty_points < 10:
+                self.log_result("Loyalty Points", False, f"Expected at least 10 points, got {loyalty_points}")
+                return False
+            
+            self.log_result("Loyalty Points", True, f"Loyalty points incremented to {loyalty_points}")
+            
+            # Create 4 more leads referencing Lead A to test Royal Client label
+            for i in range(4):
+                referred_data = {
+                    "client_name": f"Referred Client {i+3}",
+                    "primary_phone": f"+91-987654324{i+2}",
+                    "email": f"referred{i+3}@example.com",
+                    "lead_type": "Ticket",
+                    "source": "Referral",
+                    "status": "New",
+                    "reference_from": referral_code
+                }
+                
+                response = requests.post(f"{self.base_url}/crm/leads", json=referred_data, headers=self.headers)
+                if response.status_code != 200:
+                    self.log_result(f"Create Referred Lead {i+3}", False, f"Failed with status {response.status_code}")
+                    return False
+            
+            self.log_result("Create Additional Referrals", True, "Created 4 additional referred leads")
+            
+            # Verify Lead A gets 'Royal Client' label (5+ referrals)
+            time.sleep(2)  # Allow for processing
+            response = requests.get(f"{self.base_url}/crm/leads/{lead_a.get('_id')}", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get Final Referrer State", False, f"Failed with status {response.status_code}")
+                return False
+            
+            final_lead_a = response.json()
+            labels = final_lead_a.get('labels', [])
+            referred_count = len(final_lead_a.get('referred_clients', []))
+            
+            if referred_count < 5:
+                self.log_result("Referral Count", False, f"Expected at least 5 referrals, got {referred_count}")
+                return False
+            
+            if 'Royal Client' not in labels:
+                self.log_result("Royal Client Label", False, f"Royal Client label not found in labels: {labels}")
+                return False
+            
+            self.log_result("Royal Client Label", True, f"Royal Client label added after {referred_count} referrals")
+            
+            # Verify final loyalty points (should be 5+ * 10 = 50+)
+            final_points = final_lead_a.get('loyalty_points', 0)
+            if final_points < 50:
+                self.log_result("Final Loyalty Points", False, f"Expected at least 50 points, got {final_points}")
+                return False
+            
+            self.log_result("Final Loyalty Points", True, f"Final loyalty points: {final_points}")
+            
+            self.log_result("Referral System", True, "✅ Referral system working correctly with loyalty points and Royal Client label")
+            return True
+            
+        except Exception as e:
+            self.log_result("Referral System", False, f"Error: {str(e)}")
+            return False
+    
+    def test_reminders_crud(self):
+        """Test Scenario 5: Reminders CRUD Operations"""
+        try:
+            print("\n🔍 SCENARIO 5: Reminders CRUD Operations")
+            
+            # First create a lead to link reminders to
+            lead_data = {
+                "client_name": "Reminder Test Client",
+                "primary_phone": "+91-9876543250",
+                "email": "reminder.test@example.com",
+                "lead_type": "Visa",
+                "source": "Walk-in",
+                "status": "In Process"
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Lead for Reminders", False, f"Failed with status {response.status_code}")
+                return False
+            
+            lead = response.json().get('lead')
+            lead_id = lead.get('lead_id')
+            
+            # Create reminder linked to lead
+            reminder_data = {
+                "title": "Follow up on visa application",
+                "lead_id": lead_id,
+                "description": "Check document submission status and provide updates",
+                "date": (datetime.now() + timedelta(days=2)).isoformat(),
+                "priority": "High"
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/reminders", json=reminder_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Create Reminder", False, f"Failed with status {response.status_code}")
+                return False
+            
+            reminder_response = response.json()
+            if not reminder_response.get('success'):
+                self.log_result("Create Reminder", False, "Response success is False")
+                return False
+            
+            reminder = reminder_response.get('reminder')
+            reminder_id = reminder.get('_id')
+            
+            # Verify reminder fields
+            if reminder.get('title') != reminder_data['title']:
+                self.log_result("Reminder Title", False, f"Expected {reminder_data['title']}, got {reminder.get('title')}")
+                return False
+            
+            if reminder.get('lead_id') != lead_id:
+                self.log_result("Reminder Lead Link", False, f"Expected {lead_id}, got {reminder.get('lead_id')}")
+                return False
+            
+            if reminder.get('priority') != 'High':
+                self.log_result("Reminder Priority", False, f"Expected High, got {reminder.get('priority')}")
+                return False
+            
+            if reminder.get('status') != 'Pending':
+                self.log_result("Reminder Default Status", False, f"Expected Pending, got {reminder.get('status')}")
+                return False
+            
+            self.log_result("Create Reminder", True, f"✅ Reminder created successfully")
+            
+            # Test GET reminders (all)
+            response = requests.get(f"{self.base_url}/crm/reminders", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get All Reminders", False, f"Failed with status {response.status_code}")
+                return False
+            
+            all_reminders = response.json()
+            if not isinstance(all_reminders, list) or len(all_reminders) == 0:
+                self.log_result("Get All Reminders", False, f"Expected list with reminders, got {type(all_reminders)}")
+                return False
+            
+            self.log_result("Get All Reminders", True, f"Retrieved {len(all_reminders)} reminders")
+            
+            # Test GET reminders with lead_id filter
+            response = requests.get(f"{self.base_url}/crm/reminders?lead_id={lead_id}", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Get Reminders by Lead", False, f"Failed with status {response.status_code}")
+                return False
+            
+            lead_reminders = response.json()
+            lead_reminder_found = any(r.get('lead_id') == lead_id for r in lead_reminders)
+            if not lead_reminder_found:
+                self.log_result("Get Reminders by Lead", False, f"No reminders found for lead {lead_id}")
+                return False
+            
+            self.log_result("Get Reminders by Lead", True, f"Found reminders for lead {lead_id}")
+            
+            # Test UPDATE reminder (mark as Done)
+            update_data = {
+                "status": "Done",
+                "description": "Completed - Documents submitted successfully"
+            }
+            
+            response = requests.put(f"{self.base_url}/crm/reminders/{reminder_id}", json=update_data, headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Update Reminder", False, f"Failed with status {response.status_code}")
+                return False
+            
+            update_response = response.json()
+            if not update_response.get('success'):
+                self.log_result("Update Reminder", False, "Update response success is False")
+                return False
+            
+            updated_reminder = update_response.get('reminder')
+            if updated_reminder.get('status') != 'Done':
+                self.log_result("Reminder Status Update", False, f"Expected Done, got {updated_reminder.get('status')}")
+                return False
+            
+            self.log_result("Update Reminder", True, "✅ Reminder updated successfully")
+            
+            # Test DELETE reminder
+            response = requests.delete(f"{self.base_url}/crm/reminders/{reminder_id}", headers=self.headers)
+            if response.status_code != 200:
+                self.log_result("Delete Reminder", False, f"Failed with status {response.status_code}")
+                return False
+            
+            delete_response = response.json()
+            if not delete_response.get('success'):
+                self.log_result("Delete Reminder", False, "Delete response success is False")
+                return False
+            
+            # Verify reminder is deleted
+            response = requests.get(f"{self.base_url}/crm/reminders", headers=self.headers)
+            remaining_reminders = response.json()
+            deleted_reminder_found = any(r.get('_id') == reminder_id for r in remaining_reminders)
+            
+            if deleted_reminder_found:
+                self.log_result("Verify Reminder Deleted", False, "Reminder still exists after deletion")
+                return False
+            
+            self.log_result("Delete Reminder", True, "✅ Reminder deleted successfully")
+            
+            self.log_result("Reminders CRUD", True, "✅ All reminder CRUD operations working correctly")
+            return True
+            
+        except Exception as e:
+            self.log_result("Reminders CRUD", False, f"Error: {str(e)}")
+            return False
+    
     def test_update_revenue_modify_vendor_payments(self, revenue_id):
         """Test Scenario 2: UPDATE Revenue - Modify Vendor Payments"""
         try:
