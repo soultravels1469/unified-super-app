@@ -34,11 +34,9 @@ load_dotenv()
 
 user = os.getenv("MONGO_USER")
 password = os.getenv("MONGO_PASS")
-cluster = os.getenv("MONGO_CLUSTER")
 db_name = os.getenv("MONGO_DB")
 
-mongo_uri = f"mongodb+srv://{user}:{password}@{cluster}/{db_name}?retryWrites=true&w=majority"
-
+mongo_uri = f"mongodb+srv://(user):{password}@souldashboard.keakxoe.mongodb.net/?appName=souldashboard"
 client = MongoClient(mongo_uri)
 db = client[db_name]
 
