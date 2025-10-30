@@ -454,10 +454,58 @@ frontend:
         agent: "main"
         comment: "Export buttons for Revenue/Expenses/Accounts/Trial Balance, CSV import placeholder, Clear test data button with warning"
 
+  - task: "CRM Navigation - Sidebar Menu"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Layout.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added CRM section at TOP of sidebar (before Dashboard) as expandable menu with submenu items: CRM Dashboard, Leads, Upcoming Travel, Reminders, Reports. CRM menu expanded by default. Added icons from lucide-react (BarChart3, ListChecks, Calendar, Bell, TrendingUp)."
+
+  - task: "CRM Dashboard Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/crm/CRMDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fully functional CRM Dashboard with: (1) 6 interactive cards (Total Leads, Active Leads, Booked/Converted, Upcoming Travels, Today's Reminders, Total Referrals) - clicking cards navigates to filtered lead list, (2) Charts using Recharts: Monthly Leads (bar), Lead Type Breakdown (pie), Lead Source Distribution (bar), (3) 'Add New Lead' button, (4) Data fetched from backend API endpoints. Dashboard tested via screenshot - all cards and charts rendering correctly."
+
+  - task: "Leads List Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/crm/Leads.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Complete leads list page with: (1) Search (name, phone, email, lead_id, referral_code), (2) Filters (lead_type, status, source), (3) Pagination (20 per page), (4) Table view with columns: Lead ID, Client Name, Contact (phone + email), Type, Status (color-coded badges), Source, Travel Date, (5) Actions: View (eye icon), Edit (admin only), Delete (admin only), (6) Role-based access (viewer sees view only), (7) Status badges: New=blue, In Process=yellow, Booked/Converted=green, Cancelled=red, (8) Labels display, (9) 'Add New Lead' button (admin only)."
+
+  - task: "Lead Form Component"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/crm/LeadForm.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Comprehensive lead form modal for create/edit with fields: client_name*, primary_phone*, alternate_phone, email, lead_type* (Visa/Ticket/Package), source* (Instagram/Referral/Walk-in/Website/Other), reference_from (lead_id or referral_code), travel_date, status* (New/In Process/Booked/Converted/Cancelled), labels (add/remove), notes. Validation: required fields, form submission to POST/PUT endpoints. Shows info message when status=Booked/Converted about auto-revenue creation. Responsive modal with save/cancel actions."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
