@@ -88,16 +88,20 @@ async def get_lead(
 @router.put("/leads/{lead_id}")
 async def update_lead(
     lead_id: str,
-    lead_update: LeadUpdate,
-    controller: CRMController = Depends(get_crm_controller),
-    current_user: dict = None
+    lead_update: dict = Body(...),
+    controller: CRMController = Depends(get_crm_controller)
 ):
     """Update a lead"""
-    user_id = current_user.get("username") if current_user else "admin"
-    updated_lead = await controller.update_lead(lead_id, lead_update, user_id)
-    if not updated_lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-    return {"success": True, "lead": updated_lead}
+    try:
+        # Convert dict to LeadUpdate model
+        update_model = LeadUpdate(**lead_update)
+        user_id = "admin"  # Hardcode for now
+        updated_lead = await controller.update_lead(lead_id, update_model, user_id)
+        if not updated_lead:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        return {"success": True, "lead": updated_lead}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid update data: {str(e)}")
 
 
 @router.delete("/leads/{lead_id}")
