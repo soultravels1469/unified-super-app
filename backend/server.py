@@ -1587,3 +1587,8 @@ async def lifespan(app: FastAPI):
     client.close()
 
 app = FastAPI(lifespan=lifespan)
+
+# --- Health Check or Root Route ---
+@app.get("/")
+async def root():
+    return {"status": "Backend is running ✅", "message": "Soul Dashboard API is live!"}
