@@ -16,6 +16,11 @@ async def test_endpoint(data: dict):
     """Test endpoint to check if POST works"""
     return {"success": True, "received": data}
 
+@router.post("/debug")
+async def debug_endpoint(request: dict = Body(...)):
+    """Debug endpoint to check request parsing"""
+    return {"success": True, "body": request}
+
 # Dependency to get CRM controller
 def get_crm_controller(db=Depends(lambda: None)):
     # This will be replaced with actual DB dependency in server.py
