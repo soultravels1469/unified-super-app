@@ -1391,28 +1391,34 @@ class CRMBackendTester:
             self.log_result("Multiple Cost Details Mixed Payment Status", False, f"Error: {str(e)}")
             return False
     
-    def run_vendor_payment_tracking_tests(self):
-        """Run all Vendor Partial Payment Tracking tests"""
-        print("🚀 Starting Vendor Partial Payment Tracking Tests...")
+    def run_crm_backend_tests(self):
+        """Run all CRM Backend tests"""
+        print("🚀 Starting CRM Backend Tests...")
         print("=" * 70)
-        print("Testing NEW Vendor Partial Payment Tracking and Ledger Sync feature")
+        print("Testing NEW CRM Module backend endpoints comprehensively")
+        print("Testing Lead CRUD, Auto-Revenue Creation, Document Upload, Reminders, Analytics")
         print("=" * 70)
         
-        # Test Scenario 1: Create Revenue with Vendor Partial Payments
-        revenue_id = self.test_create_revenue_with_vendor_partial_payments()
+        # Test Scenario 1: Lead CRUD Operations
+        lead = self.test_create_lead()
         
-        # Test Scenario 2: Update Revenue - Modify Vendor Payments (only if creation succeeded)
-        if revenue_id:
-            self.test_update_revenue_modify_vendor_payments(revenue_id)
-            
-            # Test Scenario 3: Update Revenue - Add New Vendor Cost with Payments
-            self.test_update_revenue_add_new_vendor_cost(revenue_id)
-            
-            # Test Scenario 4: Delete Revenue with Vendor Payments (only if updates succeeded)
-            self.test_delete_revenue_with_vendor_payments(revenue_id)
+        # Test Scenario 2: Lead Filtering and Pagination
+        self.test_get_leads_with_filters()
         
-        # Test Scenario 5: Multiple Cost Details with Mixed Payment Status
-        self.test_multiple_cost_details_mixed_payment_status()
+        # Test Scenario 3: Auto-Revenue Creation when Lead Booked
+        self.test_update_lead_status_to_booked()
+        
+        # Test Scenario 4: Referral System and Loyalty Points
+        self.test_referral_system()
+        
+        # Test Scenario 5: Reminders CRUD
+        self.test_reminders_crud()
+        
+        # Test Scenario 6: Analytics Endpoints
+        self.test_analytics_endpoints()
+        
+        # Test Scenario 7: Document Upload/Download/Delete
+        self.test_document_upload()
         
         return True
 
