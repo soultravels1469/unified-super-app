@@ -190,9 +190,9 @@ class CRMBackendTester:
             self.log_result("Delete Revenue", False, f"Error: {str(e)}")
             return False
     
-    # ===== VENDOR PARTIAL PAYMENT TRACKING TESTS =====
+    # ===== CRM LEAD CRUD TESTS =====
     
-    def test_create_revenue_with_vendor_partial_payments(self):
+    def test_create_lead(self):
         """Test Scenario 1: CREATE Revenue with Vendor Partial Payments"""
         try:
             print("\n🔍 SCENARIO 1: CREATE Revenue with Vendor Partial Payments")
