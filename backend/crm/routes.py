@@ -26,14 +26,19 @@ def get_crm_controller(db=Depends(lambda: None)):
 
 @router.post("/leads")
 async def create_lead(
-    lead: LeadCreate,
+    lead_data: dict,
     controller: CRMController = Depends(get_crm_controller),
     current_user: dict = None  # Will be injected by auth middleware
 ):
     """Create a new lead"""
-    user_id = current_user.get("username") if current_user else "admin"
-    created_lead = await controller.create_lead(lead, user_id)
-    return {"success": True, "lead": created_lead}
+    try:
+        # Convert dict to LeadCreate model
+        lead = LeadCreate(**lead_data)
+        user_id = current_user.get("username") if current_user else "admin"
+        created_lead = await controller.create_lead(lead, user_id)
+        return {"success": True, "lead": created_lead}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid lead data: {str(e)}")
 
 
 @router.get("/leads")
