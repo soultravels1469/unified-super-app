@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Vendor Partial Payment Tracking and Ledger Sync
-Tests NEW Vendor Partial Payment Tracking feature with comprehensive ledger sync
-Also includes Sale & Cost Tracking and Difference-Based Sync Logic tests
+Backend API Testing for CRM Module Integration
+Tests NEW CRM Module backend endpoints comprehensively
+Includes Lead CRUD, Auto-Revenue Creation, Document Upload, Reminders, Analytics
 """
 
 import requests
@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 import uuid
 import time
+from datetime import datetime, timedelta
+import io
 
 # Configuration
 BACKEND_URL = "https://budget-tracker-582.preview.emergentagent.com/api"
