@@ -213,18 +213,120 @@ class CRMFinanceIntegrationTester:
             self.log_result("Auto-Revenue Creation", False, f"Error: {str(e)}")
             return False
     
-    def get_bank_accounts(self):
-        """Get bank accounts list"""
+    # ===== PRIMARY TEST 2: SYNC ENDPOINT =====
+    
+    def test_sync_crm_finance(self):
+        """
+        PRIMARY TEST 2: Sync Endpoint
+        GET /api/sync/crm-finance - verify it syncs booked leads without revenue entries
+        """
         try:
-            response = requests.get(f"{self.base_url}/bank-accounts", headers=self.headers)
-            if response.status_code == 200:
-                return response.json()
+            print("\n🔍 PRIMARY TEST 2: CRM-Finance Sync Endpoint")
+            
+            # Step 1: Create a booked lead without revenue
+            lead_data = {
+                "client_name": "Sync Test Client",
+                "primary_phone": "+91-9876543200",
+                "email": "synctest@example.com",
+                "lead_type": "Package",
+                "source": "Website",
+                "status": "Booked"  # Create directly as Booked
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Booked Lead for Sync", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            lead = response.json().get('lead')
+            lead_code = lead.get('lead_id')
+            
+            self.log_result("Create Booked Lead for Sync", True, f"✅ Booked lead created: {lead_code}")
+            
+            # Step 2: Verify lead is booked but check if revenue exists
+            revenues_before = self.get_revenues()
+            existing_revenue = None
+            for revenue in revenues_before:
+                if revenue.get('lead_id') == lead_code:
+                    existing_revenue = revenue
+                    break
+            
+            # Step 3: Call sync endpoint
+            response = requests.get(f"{self.base_url}/sync/crm-finance", headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("CRM-Finance Sync", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            sync_result = response.json()
+            
+            # Step 4: Validate sync response structure
+            required_fields = ['success', 'message', 'synced', 'skipped', 'total_booked_leads']
+            for field in required_fields:
+                if field not in sync_result:
+                    self.log_result("Sync Response Structure", False, f"Missing field: {field}")
+                    return False
+            
+            if not sync_result.get('success'):
+                self.log_result("Sync Success Flag", False, f"Sync success is False: {sync_result}")
+                return False
+            
+            self.log_result("Sync Response Structure", True, "✅ Sync response has all required fields")
+            
+            # Step 5: Verify counts
+            synced_count = sync_result.get('synced', 0)
+            skipped_count = sync_result.get('skipped', 0)
+            total_booked = sync_result.get('total_booked_leads', 0)
+            
+            if total_booked == 0:
+                self.log_result("Total Booked Leads", False, "No booked leads found in system")
+                return False
+            
+            # If revenue already existed, it should be skipped; if not, it should be synced
+            if existing_revenue:
+                expected_synced = 0
+                expected_skipped = 1
             else:
-                self.log_result("Get Bank Accounts", False, f"Failed with status {response.status_code}", response.text)
-                return []
+                expected_synced = 1
+                expected_skipped = 0
+            
+            self.log_result("Sync Counts", True, f"✅ Synced: {synced_count}, Skipped: {skipped_count}, Total: {total_booked}")
+            
+            # Step 6: Verify revenue entry exists after sync
+            time.sleep(2)  # Allow for sync processing
+            revenues_after = self.get_revenues()
+            
+            synced_revenue = None
+            for revenue in revenues_after:
+                if revenue.get('lead_id') == lead_code:
+                    synced_revenue = revenue
+                    break
+            
+            if not synced_revenue:
+                self.log_result("Revenue After Sync", False, "No revenue found after sync")
+                return False
+            
+            # Step 7: Validate synced revenue fields
+            validations = [
+                ("client_name", synced_revenue.get('client_name'), lead_data['client_name']),
+                ("source", synced_revenue.get('source'), lead_data['lead_type']),
+                ("lead_id", synced_revenue.get('lead_id'), lead_code),
+                ("status", synced_revenue.get('status'), "Pending")
+            ]
+            
+            for field, actual, expected in validations:
+                if actual != expected:
+                    self.log_result(f"Synced Revenue {field}", False, f"Expected {expected}, got {actual}")
+                    return False
+            
+            self.log_result("CRM-Finance Sync", True, f"✅ Sync completed successfully - Revenue created for lead {lead_code}")
+            
+            return {"sync_result": sync_result, "revenue": synced_revenue}
+            
         except Exception as e:
-            self.log_result("Get Bank Accounts", False, f"Error: {str(e)}")
-            return []
+            self.log_result("CRM-Finance Sync", False, f"Error: {str(e)}")
+            return False
     
     def get_revenue(self, revenue_id):
         """Get specific revenue by ID"""
