@@ -1375,17 +1375,16 @@ async def rebuild_accounting_data():
 # Include the router in the main app
 app.include_router(api_router)
 
-# Setup CRM routes with DB dependency
-def get_db():
-    return db
+# Setup CRM routes with DB dependency using app dependency override
+from crm.routes import get_crm_controller as crm_get_controller
 
-# Override CRM controller dependency
 def get_crm_controller_override():
     return CRMController(db)
 
-crm_routes.router.dependency_overrides[crm_routes.get_crm_controller] = get_crm_controller_override
+app.dependency_overrides[crm_get_controller] = get_crm_controller_override
 
 # Include CRM routes
+from crm import routes as crm_routes
 app.include_router(crm_routes.router)
 
 # Mount uploads directory for serving files
