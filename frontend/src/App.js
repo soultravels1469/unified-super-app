@@ -23,6 +23,12 @@ import BankAccounts from '@/pages/BankAccounts';
 import Vendors from '@/pages/Vendors';
 import ActivityLogs from '@/pages/ActivityLogs';
 import VendorReport from '@/pages/VendorReport';
+import CRMDashboard from '@/pages/crm/CRMDashboard';
+import Leads from '@/pages/crm/Leads';
+import LeadDetail from '@/pages/crm/LeadDetail';
+import UpcomingTravel from '@/pages/crm/UpcomingTravel';
+import Reminders from '@/pages/crm/Reminders';
+import CRMReports from '@/pages/crm/Reports';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
