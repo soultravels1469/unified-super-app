@@ -405,7 +405,7 @@ class CRMController:
         if lead.get("revenue_id"):
             return lead["revenue_id"]
         
-        # Prepare revenue data matching Revenue model
+        # Prepare revenue data matching Revenue model exactly
         revenue_data = {
             "id": str(uuid.uuid4()),
             "date": datetime.utcnow().strftime("%Y-%m-%d"),
@@ -427,11 +427,11 @@ class CRMController:
             "created_at": datetime.utcnow().isoformat()
         }
         
-        # Call the existing finance revenue endpoint
         try:
             # Insert directly into revenues collection
             result = await self.db.revenues.insert_one(revenue_data)
-            return str(result.inserted_id)
+            revenue_id = revenue_data["id"]  # Use the UUID we generated
+            return revenue_id
         except Exception as e:
             print(f"Error creating revenue from lead: {e}")
             return None
