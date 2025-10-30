@@ -441,18 +441,177 @@ class CRMFinanceIntegrationTester:
             self.log_result("Upcoming Travels Dashboard", False, f"Error: {str(e)}")
             return False
     
-    def get_admin_settings(self):
-        """Get admin settings"""
+    # ===== PRIMARY TEST 4: REMINDERS FILTER =====
+    
+    def test_reminders_filter(self):
+        """
+        PRIMARY TEST 4: Reminders Filter
+        GET /api/crm/reminders?status=Pending - verify only pending reminders returned
+        """
         try:
-            response = requests.get(f"{self.base_url}/admin/settings", headers=self.headers)
-            if response.status_code == 200:
-                return response.json()
-            else:
-                self.log_result("Get Admin Settings", False, f"Failed with status {response.status_code}", response.text)
-                return None
+            print("\n🔍 PRIMARY TEST 4: Reminders Filter")
+            
+            # Step 1: Create a lead for reminders
+            lead_data = {
+                "client_name": "Reminder Filter Client",
+                "primary_phone": "+91-9876543400",
+                "email": "reminder@example.com",
+                "lead_type": "Visa",
+                "source": "Referral",
+                "status": "In Process"
+            }
+            
+            response = requests.post(f"{self.base_url}/crm/leads", json=lead_data, headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Create Lead for Reminders", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            lead = response.json().get('lead')
+            lead_code = lead.get('lead_id')
+            
+            self.log_result("Create Lead for Reminders", True, f"✅ Lead created: {lead_code}")
+            
+            # Step 2: Create multiple reminders with different statuses
+            reminders_to_create = [
+                {
+                    "title": "Pending Reminder 1",
+                    "lead_id": lead_code,
+                    "description": "This should appear in pending filter",
+                    "date": (datetime.now() + timedelta(days=1)).isoformat(),
+                    "priority": "High"
+                    # status will default to "Pending"
+                },
+                {
+                    "title": "Pending Reminder 2", 
+                    "lead_id": lead_code,
+                    "description": "This should also appear in pending filter",
+                    "date": (datetime.now() + timedelta(days=2)).isoformat(),
+                    "priority": "Medium"
+                }
+            ]
+            
+            created_reminders = []
+            for reminder_data in reminders_to_create:
+                response = requests.post(f"{self.base_url}/crm/reminders", json=reminder_data, headers=self.headers)
+                
+                if response.status_code != 200:
+                    self.log_result("Create Reminder", False, f"Failed with status {response.status_code}", response.text)
+                    return False
+                
+                reminder_response = response.json()
+                if not reminder_response.get('success'):
+                    self.log_result("Create Reminder", False, "Reminder creation success is False")
+                    return False
+                
+                created_reminders.append(reminder_response.get('reminder'))
+            
+            self.log_result("Create Pending Reminders", True, f"✅ Created {len(created_reminders)} pending reminders")
+            
+            # Step 3: Mark one reminder as Done
+            if created_reminders:
+                reminder_to_complete = created_reminders[0]
+                reminder_id = reminder_to_complete.get('_id')
+                
+                update_data = {"status": "Done"}
+                response = requests.put(f"{self.base_url}/crm/reminders/{reminder_id}", json=update_data, headers=self.headers)
+                
+                if response.status_code != 200:
+                    self.log_result("Mark Reminder Done", False, f"Failed with status {response.status_code}", response.text)
+                    return False
+                
+                self.log_result("Mark Reminder Done", True, "✅ Marked one reminder as Done")
+            
+            # Step 4: Test filter - Get all reminders (no filter)
+            response = requests.get(f"{self.base_url}/crm/reminders", headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Get All Reminders", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            all_reminders = response.json()
+            
+            if not isinstance(all_reminders, list):
+                self.log_result("All Reminders Response", False, f"Expected list, got {type(all_reminders)}")
+                return False
+            
+            # Count reminders by status
+            pending_count_all = len([r for r in all_reminders if r.get('status') == 'Pending'])
+            done_count_all = len([r for r in all_reminders if r.get('status') == 'Done'])
+            
+            self.log_result("Get All Reminders", True, f"✅ Total reminders: {len(all_reminders)} (Pending: {pending_count_all}, Done: {done_count_all})")
+            
+            # Step 5: Test filter - Get only Pending reminders
+            response = requests.get(f"{self.base_url}/crm/reminders?status=Pending", headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Get Pending Reminders", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            pending_reminders = response.json()
+            
+            if not isinstance(pending_reminders, list):
+                self.log_result("Pending Reminders Response", False, f"Expected list, got {type(pending_reminders)}")
+                return False
+            
+            # Step 6: Validate filter results
+            # All returned reminders should have status = "Pending"
+            non_pending_found = []
+            for reminder in pending_reminders:
+                if reminder.get('status') != 'Pending':
+                    non_pending_found.append(reminder.get('status'))
+            
+            if non_pending_found:
+                self.log_result("Pending Filter Validation", False, f"Non-pending reminders found: {non_pending_found}")
+                return False
+            
+            # Should have at least 1 pending reminder (we created 2, marked 1 as done)
+            if len(pending_reminders) < 1:
+                self.log_result("Pending Count Validation", False, f"Expected at least 1 pending reminder, got {len(pending_reminders)}")
+                return False
+            
+            self.log_result("Pending Filter Validation", True, f"✅ Filter returned {len(pending_reminders)} pending reminders only")
+            
+            # Step 7: Test filter - Get only Done reminders
+            response = requests.get(f"{self.base_url}/crm/reminders?status=Done", headers=self.headers)
+            
+            if response.status_code != 200:
+                self.log_result("Get Done Reminders", False, f"Failed with status {response.status_code}", response.text)
+                return False
+            
+            done_reminders = response.json()
+            
+            # All returned reminders should have status = "Done"
+            non_done_found = []
+            for reminder in done_reminders:
+                if reminder.get('status') != 'Done':
+                    non_done_found.append(reminder.get('status'))
+            
+            if non_done_found:
+                self.log_result("Done Filter Validation", False, f"Non-done reminders found: {non_done_found}")
+                return False
+            
+            self.log_result("Done Filter Validation", True, f"✅ Done filter returned {len(done_reminders)} done reminders only")
+            
+            # Step 8: Verify counts match
+            total_filtered = len(pending_reminders) + len(done_reminders)
+            if total_filtered != len(all_reminders):
+                self.log_result("Filter Count Consistency", False, f"Filtered total {total_filtered} != All reminders {len(all_reminders)}")
+                return False
+            
+            self.log_result("Filter Count Consistency", True, "✅ Filter counts are consistent")
+            
+            self.log_result("Reminders Filter", True, f"✅ Reminders filter working correctly - Pending: {len(pending_reminders)}, Done: {len(done_reminders)}")
+            
+            return {
+                "all_reminders": all_reminders,
+                "pending_reminders": pending_reminders,
+                "done_reminders": done_reminders
+            }
+            
         except Exception as e:
-            self.log_result("Get Admin Settings", False, f"Error: {str(e)}")
-            return None
+            self.log_result("Reminders Filter", False, f"Error: {str(e)}")
+            return False
     
     def update_admin_settings(self, settings):
         """Update admin settings"""
