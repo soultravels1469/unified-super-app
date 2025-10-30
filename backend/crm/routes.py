@@ -26,7 +26,7 @@ def get_crm_controller(db=Depends(lambda: None)):
 
 @router.post("/leads")
 async def create_lead(
-    lead_data: dict,
+    lead_data: dict = Body(...),
     controller: CRMController = Depends(get_crm_controller),
     current_user: dict = None  # Will be injected by auth middleware
 ):
