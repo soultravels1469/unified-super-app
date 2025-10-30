@@ -60,9 +60,18 @@ function Revenue() {
     <div className="page-container" data-testid="revenue-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 className="page-title" style={{ margin: 0 }} data-testid="revenue-title">Revenue Tracker</h1>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)} data-testid="add-revenue-button">
-          + Add Revenue
-        </button>
+        <div className="flex gap-2">
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => fetchRevenues()}
+            data-testid="refresh-revenue-button"
+          >
+            🔄 Refresh
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowForm(true)} data-testid="add-revenue-button">
+            + Add Revenue
+          </button>
+        </div>
       </div>
 
       {showForm && (
