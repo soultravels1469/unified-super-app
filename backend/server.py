@@ -66,14 +66,10 @@ app = FastAPI()
 
 from fastapi.middleware.cors import CORSMiddleware
 
-origins = [
-    "https://waheguru-13.onrender.com",  # ✅ your current frontend
-    "http://localhost:3000",             # for local dev
-]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origins=["*"],   # ✅ Accept all
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
