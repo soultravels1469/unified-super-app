@@ -34,7 +34,7 @@ import CRMReports from '@/pages/crm/Reports';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || "https://backend-mwh2.onrender.com";
+const BACKEND_URL = process.env.REACT_APP_API_URL;
 
 export const API = `${BACKEND_URL}/api`;
 
