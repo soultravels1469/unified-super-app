@@ -64,6 +64,23 @@ ALGORITHM = "HS256"
 # Create the main app without a prefix
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "https://ekam-j7va.onrender.com",  # your frontend
+    "https://ekam1.onrender.com",       # your other frontend (if used)
+    "http://localhost:3000",            # for local dev
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # Create upload directory
 UPLOAD_DIR = Path(__file__).parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
