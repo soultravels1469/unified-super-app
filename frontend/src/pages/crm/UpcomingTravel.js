@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = process.env.REACT_APP_API_URL || 'https://unified-super-app-5.onrender.com';
 
 function UpcomingTravel() {
   const navigate = useNavigate();
