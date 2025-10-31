@@ -34,7 +34,8 @@ import CRMReports from '@/pages/crm/Reports';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_API_URL || "https://unified-super-app-5.onrender.com";
+
 export const API = `${BACKEND_URL}/api`;
 
 function App() {
