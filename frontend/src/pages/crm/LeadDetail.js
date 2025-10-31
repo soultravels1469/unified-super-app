@@ -5,7 +5,7 @@ import { ArrowLeft, Edit, Phone, Mail, Calendar, Tag, FileText } from 'lucide-re
 import { toast } from 'sonner';
 import LeadForm from '@/components/crm/LeadForm';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = process.env.REACT_APP_API_URL || 'https://unified-super-app-5.onrender.com';
 
 function LeadDetail() {
   const { leadId } = useParams();
