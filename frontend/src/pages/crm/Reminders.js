@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Bell, Plus, Check, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_API_URL || 'https://unified-super-app-5.onrender.com';
+const API = process.env.REACT_APP_API_URL || 'https://backend-mwh2.onrender.com';
 
 function Reminders() {
   const role = localStorage.getItem('role');
