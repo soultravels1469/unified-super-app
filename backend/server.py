@@ -67,9 +67,8 @@ app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
-    "https://ekam-j7va.onrender.com",  # your frontend
-    "https://ekam1.onrender.com",       # your other frontend (if used)
-    "http://localhost:3000",            # for local dev
+    "https://waheguru-13.onrender.com",  # ✅ your current frontend
+    "http://localhost:3000",             # for local dev
 ]
 
 app.add_middleware(
