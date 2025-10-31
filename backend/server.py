@@ -1576,14 +1576,14 @@ app.include_router(api_router)
 
 # Mount uploads directory for serving files
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+//
+//app.add_middleware(
+  //  CORSMiddleware,
+    //allow_credentials=True,
+    //allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    //allow_methods=["*"],
+    //allow_headers=["*"],
+//)
 
 # Configure logging
 logging.basicConfig(
