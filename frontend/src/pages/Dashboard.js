@@ -5,7 +5,7 @@ import { DollarSign, TrendingUp, TrendingDown, Users, Calendar, Bell, RefreshCw,
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = process.env.REACT_APP_API_URL || 'https://unified-super-app-5.onrender.com';
 
 function Dashboard() {
   const navigate = useNavigate();
