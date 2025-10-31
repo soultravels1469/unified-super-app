@@ -1,7 +1,7 @@
 // src/api.js
 
 // ✅ Render backend URL (replace with your backend’s Render URL)
-const API_BASE_URL = process.env.REACT_APP_API_URL || "https://backend-mwh2.onrender.com";
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 // ================== LEADS ==================
 
