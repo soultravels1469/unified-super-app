@@ -5,7 +5,7 @@ import { BarChart3, Users, UserCheck, Calendar, Bell, GitBranch, TrendingUp, Plu
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = process.env.REACT_APP_API_URL || 'https://unified-super-app-5.onrender.com';
 
 function CRMDashboard() {
   const navigate = useNavigate();
