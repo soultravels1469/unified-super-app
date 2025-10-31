@@ -5,7 +5,7 @@ import { ListChecks, Plus, Search, Filter, Edit, Trash2, Eye, Phone, Mail, FileT
 import { toast } from 'sonner';
 import LeadForm from '@/components/crm/LeadForm';
 
-const API = process.env.REACT_APP_API_URL || 'https://backend-mwh2.onrender.com';
+const API = process.env.REACT_APP_API_URL;
 
 function Leads() {
   const navigate = useNavigate();
